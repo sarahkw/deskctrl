@@ -1,18 +1,33 @@
-/*
-  Blink
-  Turns on an LED on for one second, then off for one second, repeatedly.
-  This example code is in the public domain.
- */
+#include <SoftwareSerial.h>
 
-void setup() {                
-	// initialize the digital pin as an output.
-	// Pin 13 has an LED connected on most Arduino boards:
-	pinMode(13, OUTPUT);     
+const int rxPin = 12;
+const int txPin = 13; // Not used.
+SoftwareSerial portDesk(rxPin, txPin);
+
+void setup()
+{
+    Serial.begin(9600);
+    portDesk.begin(9600);
 }
 
-void loop() {
+void loop()
+{
+    if (portDesk.available()) {
+        Serial.write(portDesk.read());
+    }
+
+    /*
+    if (Serial.available() > 0) {
+        int incomingByte = Serial.read();
+        Serial.write(incomingByte);
+    }
+    */
+
+    /*
 	digitalWrite(13, HIGH);   // set the LED on
 	delay(500);              // wait for a second
 	digitalWrite(13, LOW);    // set the LED off
 	delay(500);              // wait for a second
+        Serial.write("SARAH\r\n");
+    */
 }
