@@ -4,6 +4,8 @@ ARDUINO_DIR = /home/sarah/Downloads/arduino-1.6.12
 
 BOARD_TAG    = uno
 
+CPPFLAGS = -std=c++11
+
 # --- leonardo (or pro micro w/leo bootloader)
 #BOARD_TAG    = leonardo
 #MONITOR_PORT = /dev/ttyACM0
