@@ -78,7 +78,7 @@ void parse(const char* bytes) {
 
         char buffer[255];
         sprintf(buffer, "height:%d\r\n", height);
-        Serial.write(buffer);
+        // Serial.write(buffer);
     }
 }
 
