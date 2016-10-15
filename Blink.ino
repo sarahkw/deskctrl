@@ -91,9 +91,10 @@ class DeskState {
         TRIGGER_HEIGHT_CHANGED
     };
 
-    struct CmdMoveArguments {
-        int duration;
-        bool directionUp;
+    template <typename Arg0, typename Arg1>
+    struct Arg2 {
+        Arg0 arg0;
+        Arg1 arg1;
     };
 
     void stateTrigger(Trigger tgr, void *data = NULL)
@@ -138,7 +139,7 @@ class DeskState {
     void blip() { stateTrigger(TRIGGER_BLIP); }
     void cmdMove(int duration, bool directionUp)
     {
-        CmdMoveArguments args{duration, directionUp};
+        Arg2<int, bool> args{duration, directionUp};
         stateTrigger(TRIGGER_CMD_MOVE, &args);
     }
 
