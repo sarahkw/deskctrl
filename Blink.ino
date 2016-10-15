@@ -61,6 +61,17 @@ struct ByteCollector {
     }
 } byteCollector;
 
+/// Only accept messages if we get two of them in a row. This will
+/// help us drop messages that got corrupted when sending.
+struct TwiceIsNice {
+    char bytes[4];
+    bool bytesGood(char test[4]) {
+        bool ret = memcmp(test, bytes, 4) == 0;
+        memcpy(bytes, test, 4);
+        return ret;
+    }
+} twiceIsNice;
+
 void parse(const char* bytes) {
     struct Msg {
         char a;
@@ -78,7 +89,7 @@ void parse(const char* bytes) {
 
         char buffer[255];
         sprintf(buffer, "height:%d\r\n", height);
-        // Serial.write(buffer);
+        Serial.write(buffer);
     }
 }
 
@@ -100,7 +111,9 @@ void loop()
 
     // Are we full?
     if (byteCollector.full()) {
-        parse(byteCollector.bytes);
+        if (twiceIsNice.bytesGood(byteCollector.bytes)) {
+            parse(byteCollector.bytes);
+        }
     }
 
     if (!isPaused) {
