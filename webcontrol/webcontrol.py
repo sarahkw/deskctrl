@@ -17,6 +17,10 @@ class SarahsDesk(object):
         # TODO
         print("TODO: Move for {} ms towards {}".format(duration, direction))
 
+    def get(self):
+        # TODO
+        return {"height": None}
+
     def _put_internal(self, data):
         reply = {}
         ((command, data), ) = data.items()
@@ -39,7 +43,6 @@ class SarahsDesk(object):
             reply = {"error": e.args[0]}
         return reply
 
-
 OBJECTS = {"/sarahsdesk": SarahsDesk(), }
 
 
@@ -57,6 +60,16 @@ class WebControl(http.server.SimpleHTTPRequestHandler):
         else:
             self.send_response(404)
 
+    def do_GET(self):
+        if self.path in OBJECTS:
+            output = OBJECTS[self.path].get()
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            response = json.dumps(output).encode("UTF-8")
+            self.wfile.write(response)
+        else:
+            super(WebControl, self).do_GET()
 
 if __name__ == "__main__":
     httpd = http.server.HTTPServer(('', 8080), WebControl)
