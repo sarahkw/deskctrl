@@ -17,6 +17,10 @@ class SarahsDesk(object):
         # TODO
         print("TODO: Move for {} ms towards {}".format(duration, direction))
 
+    def put_height_preset(self, preset):
+        # TODO
+        print("TODO: Set height to preset {}".format(preset))
+
     def get(self):
         # TODO
         return {"height": None}
@@ -27,9 +31,11 @@ class SarahsDesk(object):
         if command == "height":
             ((subcommand, data), ) = data.items()
             if subcommand == "const":
-                self.put_height_const(data)
+                self.put_height_const(int(data))
             elif subcommand == "move":
                 self.put_height_move(int(data["duration"]), data["direction"])
+            elif subcommand == "preset":
+                self.put_height_preset(int(data))
             else:
                 raise self.HelpfulError("Bad subcommand")
         else:
