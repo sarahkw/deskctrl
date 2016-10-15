@@ -11,38 +11,22 @@ struct DeskUpDown {
     static const int upPin = 7;
     static const int downPin = 6;
 
-    unsigned long lastTime = 0;
+    void up()
+    {
+        pinMode(downPin, INPUT);
+        pinMode(upPin, OUTPUT);
+    }
 
-    DeskUpDown()
+    void down()
+    {
+        pinMode(upPin, INPUT);
+        pinMode(downPin, OUTPUT);
+    }
+
+    void stop()
     {
         pinMode(upPin, INPUT);
         pinMode(downPin, INPUT);
-    }
-
-    bool setTarget(unsigned target)
-    {
-        if (lastTime == 0) {
-            lastTime = millis();
-            if (target == 255) {
-                pinMode(upPin, OUTPUT);
-            } else if (target == 0) {
-                pinMode(downPin, OUTPUT);
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    void blip()
-    {
-        if (lastTime > 0) {
-            if (millis() - lastTime > 1000) {
-                lastTime = 0;
-                pinMode(upPin, INPUT);
-                pinMode(downPin, INPUT);
-            }
-        }
     }
 } deskUpDown;
 
@@ -77,19 +61,29 @@ class DeskState {
 
     enum State {
         STATE_INITIAL,
-        STATE_PRESET_BEFORE_HIT,
-        STATE_MOVE_BEFORE_TIMEOUT
+        STATE_GOTO_HEIGHT,
+        STATE_MOVE
     } d_state = STATE_INITIAL;
 
     enum Trigger {
         TRIGGER_BLIP,
-        TRIGGER_TIMEOUT,
-        TRIGGER_HEIGHT_HIT,
         TRIGGER_CMD_MOVE,
         TRIGGER_CMD_SET_HEIGHT,
         TRIGGER_CMD_STOP,
         TRIGGER_HEIGHT_CHANGED
     };
+
+    struct CmdMoveData {
+        unsigned long startedTime;
+        unsigned duration;
+        bool directionUp;
+    } d_cmdMoveData;
+
+    struct CmdSetHeightData {
+        unsigned long startedTime;
+        int height;
+        bool directionUp;
+    } d_cmdSetHeightData;
 
     template <typename Arg0, typename Arg1>
     struct Arg2 {
@@ -97,27 +91,63 @@ class DeskState {
         Arg1 arg1;
     };
 
-    void stateTrigger(Trigger tgr, void *data = NULL)
+    void stateTrigger(Trigger tgr, void* data = NULL)
     {
         switch (d_state) {
         case STATE_INITIAL:
+            switch (tgr) {
+            case TRIGGER_CMD_MOVE:
+                changeState(STATE_MOVE, data);
+                break;
+            case TRIGGER_CMD_SET_HEIGHT: {
+                /*
+                int height = *reinterpret_cast<int*>(data);
+                if (d_height == -1) {
+                    // XXX Not ready.
+                } else if (d_height != height) {
+                    changeState(STATE_GOTO_HEIGHT, data);
+                } else {
+                    // We're already here.
+                }
+                */
+            } break;
+            default:
+                break;
+            }
             break;
-        case STATE_PRESET_BEFORE_HIT:
+        case STATE_GOTO_HEIGHT:
             break;
-        case STATE_MOVE_BEFORE_TIMEOUT:
+        case STATE_MOVE:
+            switch (tgr) {
+            case TRIGGER_BLIP:
+                if (millis() - d_cmdMoveData.startedTime > d_cmdMoveData.duration) {
+                    changeState(STATE_INITIAL);
+                }
+            default:
+                break;
+            }
             break;
         }
     }
 
-    void stateEnter(State enterState)
+    void stateEnter(State enterState, void* data = NULL)
     {
         switch (enterState) {
         case STATE_INITIAL:
             break;
-        case STATE_PRESET_BEFORE_HIT:
+        case STATE_GOTO_HEIGHT:
             break;
-        case STATE_MOVE_BEFORE_TIMEOUT:
-            break;
+        case STATE_MOVE: {
+            Arg2<int, bool>& args = *reinterpret_cast<Arg2<int, bool>*>(data);
+            d_cmdMoveData.startedTime = millis();
+            d_cmdMoveData.duration = args.arg0;
+            d_cmdMoveData.directionUp = args.arg1;
+            if (d_cmdMoveData.directionUp) {
+                deskUpDown.up();
+            } else {
+                deskUpDown.down();
+            }
+        } break;
         }
     }
 
@@ -126,14 +156,21 @@ class DeskState {
         switch (exitState) {
         case STATE_INITIAL:
             break;
-        case STATE_PRESET_BEFORE_HIT:
+        case STATE_GOTO_HEIGHT:
             break;
-        case STATE_MOVE_BEFORE_TIMEOUT:
+        case STATE_MOVE:
+            deskUpDown.stop();
             break;
         }
     }
 
-    void changeState(State newState) {}
+    void changeState(State newState, void* data = NULL)
+    {
+        stateExit(d_state);
+        d_state = newState;
+        stateEnter(newState, data);
+    }
+
    public:
     int height() const { return d_height; }
     void blip() { stateTrigger(TRIGGER_BLIP); }
@@ -209,15 +246,22 @@ void loop()
     if (Serial.available() > 0) {
         int incomingByte = Serial.read();
         if (incomingByte == 'U') {
-            deskUpDown.setTarget(255);
+            deskState.cmdMove(1000, true);
         } else if (incomingByte == 'D') {
-            deskUpDown.setTarget(0);
+            deskState.cmdMove(1000, false);
         } else if (incomingByte == 'H') {
             char buffer[255];
             sprintf(buffer, "height:%d\r\n", deskState.height());
             Serial.write(buffer);
+        } else if (incomingByte == '1') {
+            // 300 = height for sitting
+            deskState.cmdSetHeight(300);
+        } else if (incomingByte == '2') {
+            // 325 = a little too high for sitting
+            deskState.cmdSetHeight(325);
         }
     }
 
-    deskUpDown.blip();
+
+    deskState.blip();
 }
