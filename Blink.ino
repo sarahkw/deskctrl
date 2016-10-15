@@ -48,7 +48,7 @@ struct DeskUpDown {
 
 struct ByteCollector {
     char bytes[4];
-    int position = 0;
+    unsigned position = 0;
     void insert(char byte)
     {
         if (position < sizeof(bytes)) {
@@ -72,14 +72,56 @@ struct TwiceIsNice {
     }
 } twiceIsNice;
 
-struct DeskState {
-    int height = -1;
+class DeskState {
+    int d_height = -1;
 
     enum State {
+        STATE_INITIAL,
+        STATE_PRESET_BEFORE_HIT,
+        STATE_MOVE_BEFORE_TIMEOUT
+    } d_state = STATE_INITIAL;
 
+    enum Trigger {
+        TRIGGER_BLIP,
+        TRIGGER_TIMEOUT,
+        TRIGGER_HEIGHT_HIT,
+        TRIGGER_CMD_MOVE,
+        TRIGGER_CMD_SET_HEIGHT,
+        TRIGGER_CMD_STOP,
+        TRIGGER_HEIGHT_CHANGED
     };
 
-    void parse(const char *bytes)
+    struct CmdMoveArguments {
+        int duration;
+        bool directionUp;
+    };
+
+    void stateTrigger(Trigger tgr, void *data = NULL)
+    {
+        switch (d_state) {
+            case STATE_INITIAL:
+            case STATE_PRESET_BEFORE_HIT:
+            case STATE_MOVE_BEFORE_TIMEOUT:
+                break;
+        }
+    }
+
+   public:
+    int height() const { return d_height; }
+    void blip() { stateTrigger(TRIGGER_BLIP); }
+    void cmdMove(int duration, bool directionUp)
+    {
+        CmdMoveArguments args{duration, directionUp};
+        stateTrigger(TRIGGER_CMD_MOVE, &args);
+    }
+
+    void cmdSetHeight(int height)
+    {
+        stateTrigger(TRIGGER_CMD_SET_HEIGHT, &height);
+    }
+
+    void cmdStop() { stateTrigger(TRIGGER_CMD_STOP); }
+    void parseFromDesk(const char *bytes)
     {
         struct Msg {
             unsigned char a;
@@ -90,12 +132,13 @@ struct DeskState {
 
         const Msg &msg = *reinterpret_cast<const Msg *>(bytes);
         if (msg.a == 1 && msg.b == 1) {
-            height = msg.height;
+            d_height = msg.height;
             if (msg.height_high == 1) {
-                height += 256;
+                d_height += 256;
             }
         }
     }
+
 } deskState;
 
 void setup()
@@ -117,7 +160,7 @@ void loop()
     // Are we full?
     if (byteCollector.full()) {
         if (twiceIsNice.bytesGood(byteCollector.bytes)) {
-            deskState.parse(byteCollector.bytes);
+            deskState.parseFromDesk(byteCollector.bytes);
         }
     }
 
@@ -139,7 +182,7 @@ void loop()
             deskUpDown.setTarget(0);
         } else if (incomingByte == 'H') {
             char buffer[255];
-            sprintf(buffer, "height:%d\r\n", deskState.height);
+            sprintf(buffer, "height:%d\r\n", deskState.height());
             Serial.write(buffer);
         }
     }
