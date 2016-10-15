@@ -289,6 +289,8 @@ void loop()
         } else if (incomingByte == '2') {
             // 325 = a little too high for sitting
             deskState.cmdSetHeight(325);
+        } else if (incomingByte == '3') {
+            deskState.cmdSetHeight(418);
         }
     }
 
