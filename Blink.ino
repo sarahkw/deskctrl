@@ -99,13 +99,40 @@ class DeskState {
     void stateTrigger(Trigger tgr, void *data = NULL)
     {
         switch (d_state) {
-            case STATE_INITIAL:
-            case STATE_PRESET_BEFORE_HIT:
-            case STATE_MOVE_BEFORE_TIMEOUT:
-                break;
+        case STATE_INITIAL:
+            break;
+        case STATE_PRESET_BEFORE_HIT:
+            break;
+        case STATE_MOVE_BEFORE_TIMEOUT:
+            break;
         }
     }
 
+    void stateEnter(State enterState)
+    {
+        switch (enterState) {
+        case STATE_INITIAL:
+            break;
+        case STATE_PRESET_BEFORE_HIT:
+            break;
+        case STATE_MOVE_BEFORE_TIMEOUT:
+            break;
+        }
+    }
+
+    void stateExit(State exitState)
+    {
+        switch (exitState) {
+        case STATE_INITIAL:
+            break;
+        case STATE_PRESET_BEFORE_HIT:
+            break;
+        case STATE_MOVE_BEFORE_TIMEOUT:
+            break;
+        }
+    }
+
+    void changeState(State newState) {}
    public:
     int height() const { return d_height; }
     void blip() { stateTrigger(TRIGGER_BLIP); }
