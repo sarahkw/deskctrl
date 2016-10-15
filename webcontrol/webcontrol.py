@@ -3,9 +3,41 @@
 import http.server
 import json
 
+
 class SarahsDesk(object):
+    class HelpfulError(Exception):
+        pass
+
+    def put_height_const(self, height):
+        # TODO
+        print("TODO: Set height to {}".format(height))
+
+    def put_height_move(self, duration, direction):
+        assert direction in ("up", "down")
+        # TODO
+        print("TODO: Move for {} ms towards {}".format(duration, direction))
+
+    def _put_internal(self, data):
+        reply = {}
+        ((command, data), ) = data.items()
+        if command == "height":
+            ((subcommand, data), ) = data.items()
+            if subcommand == "const":
+                self.put_height_const(data)
+            elif subcommand == "move":
+                self.put_height_move(int(data["duration"]), data["direction"])
+            else:
+                raise self.HelpfulError("Bad subcommand")
+        else:
+            raise self.HelpfulError("Bad command")
+        return reply
+
     def put(self, data):
-        return {"reply": data}
+        try:
+            reply = self._put_internal(data)
+        except self.HelpfulError as e:
+            reply = {"error": e.args[0]}
+        return reply
 
 
 OBJECTS = {"/sarahsdesk": SarahsDesk(), }
