@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 
 const int rxPin = 12;
-const int txPin = 13; // Not used.
+const int txPin = 13;  // Not used.
 SoftwareSerial portDesk(rxPin, txPin);
 
 bool isPaused = true;
@@ -13,12 +13,14 @@ struct DeskUpDown {
 
     unsigned long lastTime = 0;
 
-    DeskUpDown() {
+    DeskUpDown()
+    {
         pinMode(upPin, INPUT);
         pinMode(downPin, INPUT);
     }
 
-    bool setTarget(unsigned target) {
+    bool setTarget(unsigned target)
+    {
         if (lastTime == 0) {
             lastTime = millis();
             if (target == 255) {
@@ -32,7 +34,8 @@ struct DeskUpDown {
         }
     }
 
-    void blip() {
+    void blip()
+    {
         if (lastTime > 0) {
             if (millis() - lastTime > 1000) {
                 lastTime = 0;
@@ -46,26 +49,23 @@ struct DeskUpDown {
 struct ByteCollector {
     char bytes[4];
     int position = 0;
-    void insert(char byte) {
+    void insert(char byte)
+    {
         if (position < sizeof(bytes)) {
             bytes[position++] = byte;
         }
     }
 
-    void clear() {
-        position = 0;
-    }
-
-    bool full() const {
-        return position == sizeof(bytes);
-    }
+    void clear() { position = 0; }
+    bool full() const { return position == sizeof(bytes); }
 } byteCollector;
 
 /// Only accept messages if we get two of them in a row. This will
 /// help us drop messages that got corrupted when sending.
 struct TwiceIsNice {
     char bytes[4];
-    bool bytesGood(char test[4]) {
+    bool bytesGood(char test[4])
+    {
         bool ret = memcmp(test, bytes, 4) == 0;
         memcpy(bytes, test, 4);
         return ret;
@@ -73,25 +73,29 @@ struct TwiceIsNice {
 } twiceIsNice;
 
 struct DeskState {
+    int height = -1;
 
-  int height = -1;
+    enum State {
 
-  void parse(const char *bytes) {
-    struct Msg {
-      unsigned char a;
-      unsigned char b;
-      unsigned char height_high;
-      unsigned char height;
     };
 
-    const Msg &msg = *reinterpret_cast<const Msg *>(bytes);
-    if (msg.a == 1 && msg.b == 1) {
-      height = msg.height;
-      if (msg.height_high == 1) {
-        height += 256;
-      }
+    void parse(const char *bytes)
+    {
+        struct Msg {
+            unsigned char a;
+            unsigned char b;
+            unsigned char height_high;
+            unsigned char height;
+        };
+
+        const Msg &msg = *reinterpret_cast<const Msg *>(bytes);
+        if (msg.a == 1 && msg.b == 1) {
+            height = msg.height;
+            if (msg.height_high == 1) {
+                height += 256;
+            }
+        }
     }
-  }
 } deskState;
 
 void setup()
@@ -134,9 +138,9 @@ void loop()
         } else if (incomingByte == 'D') {
             deskUpDown.setTarget(0);
         } else if (incomingByte == 'H') {
-          char buffer[255];
-          sprintf(buffer, "height:%d\r\n", deskState.height);
-          Serial.write(buffer);
+            char buffer[255];
+            sprintf(buffer, "height:%d\r\n", deskState.height);
+            Serial.write(buffer);
         }
     }
 
