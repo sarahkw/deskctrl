@@ -72,26 +72,27 @@ struct TwiceIsNice {
     }
 } twiceIsNice;
 
-void parse(const char* bytes) {
+struct DeskState {
+
+  int height = -1;
+
+  void parse(const char *bytes) {
     struct Msg {
-        char a;
-        char b;
-        char height_high;
-        char height;
+      unsigned char a;
+      unsigned char b;
+      unsigned char height_high;
+      unsigned char height;
     };
 
-    const Msg& msg = *reinterpret_cast<const Msg*>(bytes);
+    const Msg &msg = *reinterpret_cast<const Msg *>(bytes);
     if (msg.a == 1 && msg.b == 1) {
-        int height = msg.height;
-        if (msg.height_high == 1) {
-            height += 256;
-        }
-
-        char buffer[255];
-        sprintf(buffer, "height:%d\r\n", height);
-        Serial.write(buffer);
+      height = msg.height;
+      if (msg.height_high == 1) {
+        height += 256;
+      }
     }
-}
+  }
+} deskState;
 
 void setup()
 {
@@ -112,7 +113,7 @@ void loop()
     // Are we full?
     if (byteCollector.full()) {
         if (twiceIsNice.bytesGood(byteCollector.bytes)) {
-            parse(byteCollector.bytes);
+            deskState.parse(byteCollector.bytes);
         }
     }
 
@@ -132,16 +133,12 @@ void loop()
             deskUpDown.setTarget(255);
         } else if (incomingByte == 'D') {
             deskUpDown.setTarget(0);
+        } else if (incomingByte == 'H') {
+          char buffer[255];
+          sprintf(buffer, "height:%d\r\n", deskState.height);
+          Serial.write(buffer);
         }
     }
 
     deskUpDown.blip();
-
-    /*
-	digitalWrite(13, HIGH);   // set the LED on
-	delay(500);              // wait for a second
-	digitalWrite(13, LOW);    // set the LED off
-	delay(500);              // wait for a second
-        Serial.write("SARAH\r\n");
-    */
 }
