@@ -73,17 +73,17 @@ class DeskState {
         TRIGGER_HEIGHT_CHANGED
     };
 
-    struct CmdMoveData {
-        unsigned long startedTime;
-        unsigned duration;
-        bool directionUp;
-    } d_cmdMoveData;
-
     struct CmdSetHeightData {
         unsigned long startedTime;
         int height;
         bool directionUp;
     } d_cmdSetHeightData;
+
+    struct CmdMoveData {
+        unsigned long startedTime;
+        unsigned duration;
+        bool directionUp;
+    } d_cmdMoveData;
 
     template <typename Arg0, typename Arg1>
     struct Arg2 {
@@ -100,7 +100,6 @@ class DeskState {
                 changeState(STATE_MOVE, data);
                 break;
             case TRIGGER_CMD_SET_HEIGHT: {
-                /*
                 int height = *reinterpret_cast<int*>(data);
                 if (d_height == -1) {
                     // XXX Not ready.
@@ -109,13 +108,33 @@ class DeskState {
                 } else {
                     // We're already here.
                 }
-                */
             } break;
             default:
                 break;
             }
             break;
         case STATE_GOTO_HEIGHT:
+            switch (tgr) {
+            case TRIGGER_BLIP:
+                static const int TIMEOUT = 10000;
+                if (millis() - d_cmdSetHeightData.startedTime > TIMEOUT) {
+                    changeState(STATE_INITIAL);
+                }
+                break;
+            case TRIGGER_HEIGHT_CHANGED:
+                if (d_cmdSetHeightData.directionUp) {
+                    if (d_height > d_cmdSetHeightData.height) {
+                        changeState(STATE_INITIAL);
+                    }
+                } else {
+                    if (d_height < d_cmdSetHeightData.height) {
+                        changeState(STATE_INITIAL);
+                    }
+                }
+                break;
+            default:
+                break;
+            }
             break;
         case STATE_MOVE:
             switch (tgr) {
@@ -123,6 +142,7 @@ class DeskState {
                 if (millis() - d_cmdMoveData.startedTime > d_cmdMoveData.duration) {
                     changeState(STATE_INITIAL);
                 }
+                break;
             default:
                 break;
             }
@@ -135,7 +155,18 @@ class DeskState {
         switch (enterState) {
         case STATE_INITIAL:
             break;
-        case STATE_GOTO_HEIGHT:
+        case STATE_GOTO_HEIGHT: {
+            int height = *reinterpret_cast<int*>(data);
+            d_cmdSetHeightData.startedTime = millis();
+            d_cmdSetHeightData.height = height;
+            if (height > d_height) {
+                d_cmdSetHeightData.directionUp = true;
+                deskUpDown.up();
+            } else {
+                d_cmdSetHeightData.directionUp = false;
+                deskUpDown.down();
+            }
+        }
             break;
         case STATE_MOVE: {
             Arg2<int, bool>& args = *reinterpret_cast<Arg2<int, bool>*>(data);
@@ -157,7 +188,6 @@ class DeskState {
         case STATE_INITIAL:
             break;
         case STATE_GOTO_HEIGHT:
-            break;
         case STATE_MOVE:
             deskUpDown.stop();
             break;
