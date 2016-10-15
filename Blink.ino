@@ -93,6 +93,12 @@ class DeskState {
 
     void stateTrigger(Trigger tgr, void* data = NULL)
     {
+//        if (tgr == TRIGGER_HEIGHT_CHANGED) {
+//            char buffer[255];
+//            sprintf(buffer, "New height: %d\r\n", d_height);
+//            Serial.write(buffer);
+//        }
+
         switch (d_state) {
         case STATE_INITIAL:
             switch (tgr) {
@@ -260,6 +266,12 @@ void loop()
     if (byteCollector.full()) {
         if (twiceIsNice.bytesGood(byteCollector.bytes)) {
             deskState.parseFromDesk(byteCollector.bytes);
+//            char buf[256];
+//            sprintf(buf, "%x %x %x %x\r\n", byteCollector.bytes[0],
+//                    byteCollector.bytes[1], byteCollector.bytes[2],
+//                    byteCollector.bytes[3]);
+//            Serial.write(buf);
+//            Serial.write(byteCollector.bytes, 4);
         }
     }
 
