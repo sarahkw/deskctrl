@@ -116,7 +116,7 @@ class DeskState {
         case STATE_GOTO_HEIGHT:
             switch (tgr) {
             case TRIGGER_BLIP:
-                static const int TIMEOUT = 10000;
+                static const int TIMEOUT = 30000;
                 if (millis() - d_cmdSetHeightData.startedTime > TIMEOUT) {
                     changeState(STATE_INITIAL);
                 }
