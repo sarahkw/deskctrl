@@ -159,9 +159,13 @@ class DeskState {
 
         const Msg &msg = *reinterpret_cast<const Msg *>(bytes);
         if (msg.a == 1 && msg.b == 1) {
-            d_height = msg.height;
+            int newHeight = msg.height;
             if (msg.height_high == 1) {
-                d_height += 256;
+                newHeight += 256;
+            }
+            if (newHeight != d_height) {
+                d_height = newHeight;
+                stateTrigger(TRIGGER_HEIGHT_CHANGED);
             }
         }
     }
