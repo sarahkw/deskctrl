@@ -2,9 +2,13 @@
 
 import http.server
 import json
+import serial
 
 
 class SarahsDesk(object):
+    def __init__(self):
+        self.ser = serial.Serial("/dev/ttyACM0", 9600)
+
     class HelpfulError(Exception):
         pass
 
@@ -16,6 +20,10 @@ class SarahsDesk(object):
         assert direction in ("up", "down")
         # TODO
         print("TODO: Move for {} ms towards {}".format(duration, direction))
+        if direction == "up":
+            self.ser.write(b"U")
+        elif direction == "down":
+            self.ser.write(b"D")
 
     def put_height_preset(self, preset):
         # TODO
@@ -49,6 +57,7 @@ class SarahsDesk(object):
             reply = {"error": e.args[0]}
         return reply
 
+
 OBJECTS = {"/sarahsdesk": SarahsDesk(), }
 
 
@@ -76,6 +85,7 @@ class WebControl(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(response)
         else:
             super(WebControl, self).do_GET()
+
 
 if __name__ == "__main__":
     httpd = http.server.HTTPServer(('', 8080), WebControl)
