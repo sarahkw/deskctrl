@@ -1,5 +1,15 @@
 #include <SoftwareSerial.h>
 
+#include <limits.h>
+
+unsigned long timeBetween(unsigned long from, unsigned long to) {
+    if (to >= from) {
+        return to - from;
+    }
+    // Overflowed.
+    return ULONG_MAX - from + to;
+}
+
 const int rxPin = 12;
 const int txPin = 13;  // Not used.
 SoftwareSerial portDesk(rxPin, txPin);
@@ -64,9 +74,8 @@ class ByteCollector {
         }
 
         if (!d_isPaused) {
-            // TODO Support overflows.
             const int DELAY_MS = 10;
-            if (millis() - d_lastMessage > DELAY_MS) {
+            if (timeBetween(d_lastMessage, millis()) > DELAY_MS) {
                 clear();
                 d_isPaused = true;
             }
@@ -159,7 +168,7 @@ class DeskState {
             switch (tgr) {
             case TRIGGER_BLIP:
                 static const int TIMEOUT = 30000;
-                if (millis() - d_cmdSetHeightData.startedTime > TIMEOUT) {
+                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) > TIMEOUT) {
                     changeState(STATE_INITIAL);
                 }
                 break;
@@ -181,7 +190,8 @@ class DeskState {
         case STATE_MOVE:
             switch (tgr) {
             case TRIGGER_BLIP:
-                if (millis() - d_cmdMoveData.startedTime > d_cmdMoveData.duration) {
+                if (timeBetween(d_cmdMoveData.startedTime, millis()) >
+                    d_cmdMoveData.duration) {
                     changeState(STATE_INITIAL);
                 }
                 break;
