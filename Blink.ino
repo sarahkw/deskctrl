@@ -27,15 +27,13 @@ struct DeskHardware {
     }
 } deskHardware;
 
-struct ByteCollector {
+class ByteCollector {
     Stream& d_stream;
     char d_bytes[4];
     unsigned d_position = 0;
 
     bool d_isPaused = true;
     unsigned long d_lastMessage = 0;
-
-    ByteCollector(Stream& str) : d_stream(str) {}
 
     void insert(char byte)
     {
@@ -46,6 +44,8 @@ struct ByteCollector {
 
     void clear() { d_position = 0; }
     bool full() const { return d_position == sizeof(d_bytes); }
+   public:
+    ByteCollector(Stream& str) : d_stream(str) {}
     bool blip(char outputBytes[4])
     {
         if (d_stream.available()) {
