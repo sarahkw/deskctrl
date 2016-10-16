@@ -3,7 +3,28 @@
 import http.server
 import json
 import serial
+import struct
 
+class Protocol(object):
+    @staticmethod
+    def _encode(command, argument):
+        return struct.pack("<HH", command, argument)
+    
+    @staticmethod
+    def getHeight():
+        return Protocol._encode(1, 0)
+
+    @staticmethod
+    def setHeight(height):
+        return Protocol._encode(2, height)
+
+    @staticmethod
+    def moveUp(duration):
+        return Protocol._encode(3, duration)
+
+    @staticmethod
+    def moveDown(duration):
+        return Protocol._encode(4, duration)
 
 class SarahsDesk(object):
     def __init__(self):
@@ -13,17 +34,16 @@ class SarahsDesk(object):
         pass
 
     def put_height_const(self, height):
-        # TODO
-        print("TODO: Set height to {}".format(height))
+        print("Set height to {}".format(height))
+        self.ser.write(Protocol.setHeight(height))
 
     def put_height_move(self, duration, direction):
         assert direction in ("up", "down")
-        # TODO
-        print("TODO: Move for {} ms towards {}".format(duration, direction))
+        print("Move for {} ms towards {}".format(duration, direction))
         if direction == "up":
-            self.ser.write(b"U")
+            self.ser.write(Protocol.moveUp(duration))
         elif direction == "down":
-            self.ser.write(b"D")
+            self.ser.write(Protocol.moveDown(duration))
 
     def put_height_preset(self, preset):
         # TODO

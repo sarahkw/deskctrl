@@ -103,7 +103,7 @@ class ByteCollector {
 };
 
 ByteCollector deskByteCollector(portDesk, 4);
-ByteCollector controlByteCollector(Serial, 2);
+ByteCollector controlByteCollector(Serial, 4);
 
 /// Only accept messages if we get two of them in a row. This will
 /// help us drop messages that got corrupted when sending.
@@ -350,7 +350,7 @@ void loop()
     }
 
     {
-        char bytes[2];
+        char bytes[4];
         size_t size = controlByteCollector.blip(bytes);
         if (size == 1) {
             if (bytes[0] == 'U') {
@@ -369,6 +369,25 @@ void loop()
                 deskState.cmdSetHeight(325);
             } else if (bytes[0] == '3') {
                 deskState.cmdSetHeight(418);
+            }
+        } else if (size == 4) {
+            unsigned short command;
+            unsigned short argument;
+            memcpy(&command, bytes, sizeof(command));
+            memcpy(&argument, bytes + 2, sizeof(command));
+            
+            switch (command) {
+            case 2:
+                deskState.cmdSetHeight(argument);
+                break;
+            case 3:
+                deskState.cmdMove(argument, true);
+                break;
+            case 4:
+                deskState.cmdMove(argument, false);
+                break;
+            default:
+                break;
             }
         }
     }
