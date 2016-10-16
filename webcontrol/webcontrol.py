@@ -60,6 +60,10 @@ class SarahsDesk(object):
             ((subcommand, data), ) = data.items()
             if subcommand == "const":
                 self.put_height_const(int(data))
+            elif subcommand == "percent":
+                MIN = 242
+                MAX = 498
+                self.put_height_const(int(int(data) / 100 * (MAX-MIN) + MIN))
             elif subcommand == "move":
                 self.put_height_move(int(data["duration"]), data["direction"])
             elif subcommand == "preset":
