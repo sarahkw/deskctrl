@@ -287,6 +287,14 @@ class DeskState {
             return;
         }
 
+        const int MIN_HEIGHT = 242;
+        const int MAX_HEIGHT = 498;
+        if (height < MIN_HEIGHT) {
+            height = MIN_HEIGHT;
+        } else if (height > MAX_HEIGHT) {
+            height = MAX_HEIGHT;
+        }
+
         int heightDiff = height - d_height;
         if (heightDiff < 0) {
             heightDiff = -heightDiff;
