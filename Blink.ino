@@ -4,9 +4,6 @@ const int rxPin = 12;
 const int txPin = 13;  // Not used.
 SoftwareSerial portDesk(rxPin, txPin);
 
-bool isPaused = true;
-unsigned long lastMessage = 0;
-
 struct DeskHardware {
     static const int upPin = 7;
     static const int downPin = 6;
@@ -31,18 +28,54 @@ struct DeskHardware {
 } deskHardware;
 
 struct ByteCollector {
-    char bytes[4];
-    unsigned position = 0;
+    Stream& d_stream;
+    char d_bytes[4];
+    unsigned d_position = 0;
+
+    bool d_isPaused = true;
+    unsigned long d_lastMessage = 0;
+
+    ByteCollector(Stream& str) : d_stream(str) {}
+
     void insert(char byte)
     {
-        if (position < sizeof(bytes)) {
-            bytes[position++] = byte;
+        if (d_position < sizeof(d_bytes)) {
+            d_bytes[d_position++] = byte;
         }
     }
 
-    void clear() { position = 0; }
-    bool full() const { return position == sizeof(bytes); }
-} byteCollector;
+    void clear() { d_position = 0; }
+    bool full() const { return d_position == sizeof(d_bytes); }
+    bool blip(char outputBytes[4])
+    {
+        if (d_stream.available()) {
+            int byte = d_stream.read();
+            insert(byte);
+            d_lastMessage = millis();
+            d_isPaused = false;
+        }
+
+        bool hasData = false;
+
+        // Are we full?
+        if (full()) {
+            memcpy(outputBytes, d_bytes, 4);
+            hasData = true;
+        }
+
+        if (!d_isPaused) {
+            // TODO Support overflows.
+            const int DELAY_MS = 10;
+            if (millis() - d_lastMessage > DELAY_MS) {
+                clear();
+                d_isPaused = true;
+            }
+        }
+
+        return hasData;
+    }
+
+} byteCollector(portDesk);
 
 /// Only accept messages if we get two of them in a row. This will
 /// help us drop messages that got corrupted when sending.
@@ -270,34 +303,18 @@ void setup()
 
 void loop()
 {
-    if (portDesk.available()) {
-        int byte = portDesk.read();
-        // Serial.write(byte);
-        byteCollector.insert(byte);
-        lastMessage = millis();
-        isPaused = false;
-    }
-
-    // Are we full?
-    if (byteCollector.full()) {
-        if (twiceIsNice.bytesGood(byteCollector.bytes)) {
-            deskState.parseFromDesk(byteCollector.bytes);
-//            char buf[256];
-//            sprintf(buf, "%x %x %x %x\r\n", byteCollector.bytes[0],
-//                    byteCollector.bytes[1], byteCollector.bytes[2],
-//                    byteCollector.bytes[3]);
-//            Serial.write(buf);
-//            Serial.write(byteCollector.bytes, 4);
-        }
-    }
-
-    if (!isPaused) {
-        // TODO Support overflows.
-        const int DELAY_MS = 10;
-        if (millis() - lastMessage > DELAY_MS) {
-            // Serial.write(0);
-            byteCollector.clear();
-            isPaused = true;
+    char bytes[4];
+    if (byteCollector.blip(bytes)) {
+        if (twiceIsNice.bytesGood(bytes)) {
+            deskState.parseFromDesk(bytes);
+            //            char buf[256];
+            //            sprintf(buf, "%x %x %x %x\r\n",
+            //            byteCollector.bytes[0],
+            //                    byteCollector.bytes[1],
+            //                    byteCollector.bytes[2],
+            //                    byteCollector.bytes[3]);
+            //            Serial.write(buf);
+            //            Serial.write(byteCollector.bytes, 4);
         }
     }
 
