@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
-
 #include <limits.h>
+#include <stdlib.h>
 
 unsigned long timeBetween(unsigned long from, unsigned long to) {
     if (to >= from) {
@@ -39,7 +39,8 @@ struct DeskHardware {
 
 class ByteCollector {
     Stream& d_stream;
-    char d_bytes[4];
+    char* d_bytes;
+    size_t d_size;
     unsigned d_position = 0;
 
     bool d_isPaused = true;
@@ -47,16 +48,27 @@ class ByteCollector {
 
     void insert(char byte)
     {
-        if (d_position < sizeof(d_bytes)) {
+        if (d_position < d_size) {
             d_bytes[d_position++] = byte;
         }
     }
 
     void clear() { d_position = 0; }
-    bool full() const { return d_position == sizeof(d_bytes); }
+    bool full() const { return d_position == d_size; }
+
+    // No copy or assign.
+    ByteCollector(ByteCollector&);
+    void operator=(ByteCollector&);
+
    public:
-    ByteCollector(Stream& str) : d_stream(str) {}
-    bool blip(char outputBytes[4])
+    ByteCollector(Stream& str, size_t size)
+        : d_stream(str),
+          d_bytes(reinterpret_cast<char*>(malloc(size))),
+          d_size(size)
+    {
+    }
+    ~ByteCollector() { free(d_bytes); }
+    size_t blip(char* outputBytes)
     {
         if (d_stream.available()) {
             int byte = d_stream.read();
@@ -65,26 +77,30 @@ class ByteCollector {
             d_isPaused = false;
         }
 
-        bool hasData = false;
+        size_t bytesReturned = 0;
 
         // Are we full?
         if (full()) {
-            memcpy(outputBytes, d_bytes, 4);
-            hasData = true;
+            bytesReturned = d_size;
+            memcpy(outputBytes, d_bytes, bytesReturned);
         }
 
         if (!d_isPaused) {
             const int DELAY_MS = 10;
             if (timeBetween(d_lastMessage, millis()) > DELAY_MS) {
+                if (!full()) {
+                    bytesReturned = d_position;
+                    memcpy(outputBytes, d_bytes, bytesReturned);
+                }
                 clear();
                 d_isPaused = true;
             }
         }
 
-        return hasData;
+        return bytesReturned;
     }
 
-} byteCollector(portDesk);
+} byteCollector(portDesk, 4);
 
 /// Only accept messages if we get two of them in a row. This will
 /// help us drop messages that got corrupted when sending.
@@ -314,7 +330,7 @@ void setup()
 void loop()
 {
     char bytes[4];
-    if (byteCollector.blip(bytes)) {
+    if (byteCollector.blip(bytes) == 4) {
         if (twiceIsNice.bytesGood(bytes)) {
             deskState.parseFromDesk(bytes);
             //            char buf[256];
