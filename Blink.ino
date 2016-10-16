@@ -7,7 +7,7 @@ SoftwareSerial portDesk(rxPin, txPin);
 bool isPaused = true;
 unsigned long lastMessage = 0;
 
-struct DeskUpDown {
+struct DeskHardware {
     static const int upPin = 7;
     static const int downPin = 6;
 
@@ -28,7 +28,7 @@ struct DeskUpDown {
         pinMode(upPin, INPUT);
         pinMode(downPin, INPUT);
     }
-} deskUpDown;
+} deskHardware;
 
 struct ByteCollector {
     char bytes[4];
@@ -170,10 +170,10 @@ class DeskState {
             d_cmdSetHeightData.height = height;
             if (height > d_height) {
                 d_cmdSetHeightData.directionUp = true;
-                deskUpDown.up();
+                deskHardware.up();
             } else {
                 d_cmdSetHeightData.directionUp = false;
-                deskUpDown.down();
+                deskHardware.down();
             }
         }
             break;
@@ -183,9 +183,9 @@ class DeskState {
             d_cmdMoveData.duration = args.arg0;
             d_cmdMoveData.directionUp = args.arg1;
             if (d_cmdMoveData.directionUp) {
-                deskUpDown.up();
+                deskHardware.up();
             } else {
-                deskUpDown.down();
+                deskHardware.down();
             }
         } break;
         }
@@ -198,7 +198,7 @@ class DeskState {
             break;
         case STATE_GOTO_HEIGHT:
         case STATE_MOVE:
-            deskUpDown.stop();
+            deskHardware.stop();
             break;
         }
     }
