@@ -100,7 +100,10 @@ class ByteCollector {
         return bytesReturned;
     }
 
-} byteCollector(portDesk, 4);
+};
+
+ByteCollector deskByteCollector(portDesk, 4);
+ByteCollector controlByteCollector(Serial, 2);
 
 /// Only accept messages if we get two of them in a row. This will
 /// help us drop messages that got corrupted when sending.
@@ -329,42 +332,46 @@ void setup()
 
 void loop()
 {
-    char bytes[4];
-    if (byteCollector.blip(bytes) == 4) {
-        if (twiceIsNice.bytesGood(bytes)) {
-            deskState.parseFromDesk(bytes);
-            //            char buf[256];
-            //            sprintf(buf, "%x %x %x %x\r\n",
-            //            byteCollector.bytes[0],
-            //                    byteCollector.bytes[1],
-            //                    byteCollector.bytes[2],
-            //                    byteCollector.bytes[3]);
-            //            Serial.write(buf);
-            //            Serial.write(byteCollector.bytes, 4);
+    {
+        char bytes[4];
+        if (deskByteCollector.blip(bytes) == 4) {
+            if (twiceIsNice.bytesGood(bytes)) {
+                deskState.parseFromDesk(bytes);
+                //            char buf[256];
+                //            sprintf(buf, "%x %x %x %x\r\n",
+                //            byteCollector.bytes[0],
+                //                    byteCollector.bytes[1],
+                //                    byteCollector.bytes[2],
+                //                    byteCollector.bytes[3]);
+                //            Serial.write(buf);
+                //            Serial.write(byteCollector.bytes, 4);
+            }
         }
     }
 
-    if (Serial.available() > 0) {
-        int incomingByte = Serial.read();
-        if (incomingByte == 'U') {
-            deskState.cmdMove(900, true);
-        } else if (incomingByte == 'D') {
-            deskState.cmdMove(900, false);
-        } else if (incomingByte == 'H') {
-            char buffer[255];
-            sprintf(buffer, "height:%d\r\n", deskState.height());
-            Serial.write(buffer);
-        } else if (incomingByte == '1') {
-            // 300 = height for sitting
-            deskState.cmdSetHeight(300);
-        } else if (incomingByte == '2') {
-            // 325 = a little too high for sitting
-            deskState.cmdSetHeight(325);
-        } else if (incomingByte == '3') {
-            deskState.cmdSetHeight(418);
+    {
+        char bytes[2];
+        size_t size = controlByteCollector.blip(bytes);
+        if (size == 1) {
+            if (bytes[0] == 'U') {
+                deskState.cmdMove(900, true);
+            } else if (bytes[0] == 'D') {
+                deskState.cmdMove(900, false);
+            } else if (bytes[0] == 'H') {
+                char buffer[255];
+                sprintf(buffer, "height:%d\r\n", deskState.height());
+                Serial.write(buffer);
+            } else if (bytes[0] == '1') {
+                // 300 = height for sitting
+                deskState.cmdSetHeight(300);
+            } else if (bytes[0] == '2') {
+                // 325 = a little too high for sitting
+                deskState.cmdSetHeight(325);
+            } else if (bytes[0] == '3') {
+                deskState.cmdSetHeight(418);
+            }
         }
     }
-
 
     deskState.blip();
 }
