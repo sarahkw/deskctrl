@@ -57,6 +57,9 @@ struct TwiceIsNice {
 } twiceIsNice;
 
 class DeskState {
+    // how much height has changed before we realize.
+    static const int HEIGHT_DELAY = 9;
+
     int d_height = -1;
 
     enum State {
@@ -129,11 +132,11 @@ class DeskState {
                 break;
             case TRIGGER_HEIGHT_CHANGED:
                 if (d_cmdSetHeightData.directionUp) {
-                    if (d_height > d_cmdSetHeightData.height) {
+                    if (d_height + HEIGHT_DELAY > d_cmdSetHeightData.height) {
                         changeState(STATE_INITIAL);
                     }
                 } else {
-                    if (d_height < d_cmdSetHeightData.height) {
+                    if (d_height - HEIGHT_DELAY < d_cmdSetHeightData.height) {
                         changeState(STATE_INITIAL);
                     }
                 }
@@ -218,7 +221,20 @@ class DeskState {
 
     void cmdSetHeight(int height)
     {
-        stateTrigger(TRIGGER_CMD_SET_HEIGHT, &height);
+        if (height == d_height) {
+            return;
+        }
+
+        int heightDiff = height - d_height;
+        if (heightDiff < 0) {
+            heightDiff = -heightDiff;
+        }
+        if (heightDiff <= HEIGHT_DELAY) {
+            static const int FACTOR = 100;
+            cmdMove(heightDiff * FACTOR, height > d_height);
+        } else {
+            stateTrigger(TRIGGER_CMD_SET_HEIGHT, &height);
+        }
     }
 
     void cmdStop() { stateTrigger(TRIGGER_CMD_STOP); }
@@ -288,9 +304,9 @@ void loop()
     if (Serial.available() > 0) {
         int incomingByte = Serial.read();
         if (incomingByte == 'U') {
-            deskState.cmdMove(1000, true);
+            deskState.cmdMove(900, true);
         } else if (incomingByte == 'D') {
-            deskState.cmdMove(1000, false);
+            deskState.cmdMove(900, false);
         } else if (incomingByte == 'H') {
             char buffer[255];
             sprintf(buffer, "height:%d\r\n", deskState.height());
