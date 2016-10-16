@@ -14,28 +14,62 @@ const int rxPin = 12;
 const int txPin = 13;  // Not used.
 SoftwareSerial portDesk(rxPin, txPin);
 
+/// No transistors. This would be great, but the problem is that when
+/// the arduino has no power, enough current goes to ground that the
+/// desk thinks we press the buttons.
+///
+// struct DeskHardware {
+//     static const int upPin = 7;
+//     static const int downPin = 6;
+// 
+//     void up()
+//     {
+//         pinMode(downPin, INPUT);
+//         pinMode(upPin, OUTPUT);
+//     }
+// 
+//     void down()
+//     {
+//         pinMode(upPin, INPUT);
+//         pinMode(downPin, OUTPUT);
+//     }
+// 
+//     void stop()
+//     {
+//         pinMode(upPin, INPUT);
+//         pinMode(downPin, INPUT);
+//     }
+// } deskHardware;
+
 struct DeskHardware {
     static const int upPin = 7;
     static const int downPin = 6;
 
+    DeskHardware()
+    {
+        pinMode(downPin, OUTPUT);
+        pinMode(upPin, OUTPUT);
+    }
+
     void up()
     {
-        pinMode(downPin, INPUT);
-        pinMode(upPin, OUTPUT);
+        digitalWrite(downPin, LOW);
+        digitalWrite(upPin, HIGH);
     }
 
     void down()
     {
-        pinMode(upPin, INPUT);
-        pinMode(downPin, OUTPUT);
+        digitalWrite(upPin, LOW);
+        digitalWrite(downPin, HIGH);
     }
 
     void stop()
     {
-        pinMode(upPin, INPUT);
-        pinMode(downPin, INPUT);
+        digitalWrite(upPin, LOW);
+        digitalWrite(downPin, LOW);
     }
 } deskHardware;
+
 
 class ByteCollector {
     Stream& d_stream;
