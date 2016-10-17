@@ -107,8 +107,11 @@ class WebControl(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             response = json.dumps(output).encode("UTF-8")
             self.wfile.write(response)
-        else:
+        elif self.path == "/clip.html":
+            # Whitelist
             super(WebControl, self).do_GET()
+        else:
+            self.send_response(404)
 
 
 if __name__ == "__main__":
