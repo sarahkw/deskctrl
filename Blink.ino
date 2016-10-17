@@ -175,6 +175,7 @@ private:
     };
 
     struct CmdSetHeightData {
+        static const int TIMEOUT = 30000;
         unsigned long startedTime;
         int height;
         bool directionUp;
@@ -233,8 +234,8 @@ private:
         case STATE_GOTO_HEIGHT:
             switch (tgr) {
             case TRIGGER_BLIP:
-                static const int TIMEOUT = 30000;
-                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) > TIMEOUT) {
+                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) >
+                    CmdSetHeightData::TIMEOUT) {
                     changeState(STATE_INITIAL);
                 }
                 break;
@@ -280,9 +281,8 @@ private:
                 }
             } break;
             case TRIGGER_BLIP:
-                // Reuse same timeout.
-                static const int TIMEOUT = 30000;
-                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) > TIMEOUT) {
+                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) >
+                    CmdSetHeightData::TIMEOUT) {
                     changeState(STATE_INITIAL);
                 }
                 break;
