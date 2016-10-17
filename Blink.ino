@@ -2,7 +2,8 @@
 #include <limits.h>
 #include <stdlib.h>
 
-unsigned long timeBetween(unsigned long from, unsigned long to) {
+unsigned long timeBetween(unsigned long from, unsigned long to)
+{
     if (to >= from) {
         return to - from;
     }
@@ -163,7 +164,9 @@ private:
         STATE_INITIAL,
         STATE_GOTO_HEIGHT,
         STATE_MOVE,
-        STATE_VERIFY_GOTO_HEIGHT
+        STATE_VERIFY_GOTO_HEIGHT,
+        STATE_FIND_HEIGHT_BLIP,
+        STATE_FIND_HEIGHT_LISTEN
     } d_state = STATE_INITIAL;
 
     enum Trigger {
@@ -203,6 +206,20 @@ private:
         bool directionUp;
     } d_cmdMoveData;
 
+    struct CmdFindHeightData {
+        // STATE_FIND_HEIGHT_BLIP
+        static const int BLIP_TIMEOUT = 10;
+        unsigned long startedTime;
+        int targetHeight;
+
+        // STATE_FIND_HEIGHT_LISTEN
+        static const int CONVERGE_COUNT = 5;
+        static const int CONVERGE_TIMEOUT = 1000;
+        unsigned long startedTime2;
+        int lastHeight;
+        int lastHeightSeenCount;
+    } d_cmdFindHeightData;
+
     template <typename Arg0, typename Arg1>
     struct Arg2 {
         Arg0 arg0;
@@ -220,7 +237,7 @@ private:
             case TRIGGER_CMD_SET_HEIGHT: {
                 int height = *reinterpret_cast<int*>(data);
                 if (d_height == -1) {
-                    // XXX Not ready.
+                    changeState(STATE_FIND_HEIGHT_BLIP, data);
                 } else if (d_height != height) {
                     changeState(STATE_GOTO_HEIGHT, data);
                 } else {
@@ -290,6 +307,43 @@ private:
                 break;
             }
             break;
+        case STATE_FIND_HEIGHT_BLIP:
+            switch (tgr) {
+            case TRIGGER_BLIP:
+                if (timeBetween(d_cmdFindHeightData.startedTime, millis()) >
+                    CmdFindHeightData::BLIP_TIMEOUT) {
+                    changeState(STATE_FIND_HEIGHT_LISTEN);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case STATE_FIND_HEIGHT_LISTEN:
+            switch (tgr) {
+            case TRIGGER_HEIGHT_UPDATED: {
+                auto& d = d_cmdFindHeightData;
+                if (d_height == d.lastHeight) {
+                    ++d.lastHeightSeenCount;
+                } else {
+                    d.lastHeight = d_height;
+                    d.lastHeightSeenCount = 1;
+                }
+                if (d.lastHeightSeenCount ==
+                    CmdFindHeightData::CONVERGE_COUNT) {
+                    changeState(STATE_GOTO_HEIGHT, &d.targetHeight);
+                }
+            } break;
+            case TRIGGER_BLIP:
+                if (timeBetween(d_cmdFindHeightData.startedTime2, millis()) >
+                    CmdFindHeightData::CONVERGE_TIMEOUT) {
+                    changeState(STATE_INITIAL);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
         }
     }
 
@@ -327,6 +381,20 @@ private:
         } break;
         case STATE_VERIFY_GOTO_HEIGHT:
             break;
+        case STATE_FIND_HEIGHT_BLIP: {
+            int height = *reinterpret_cast<int*>(data);
+            d_cmdFindHeightData.startedTime = millis();
+            d_cmdFindHeightData.targetHeight = height;
+
+            // I think Up is probably safer so nobody gets
+            // crushed. Haha.
+            deskHardware.up();
+        } break;
+        case STATE_FIND_HEIGHT_LISTEN:
+            d_cmdFindHeightData.startedTime2 = millis();
+            d_cmdFindHeightData.lastHeight = -1;
+            d_cmdFindHeightData.lastHeightSeenCount = 0;
+            break;
         }
     }
 
@@ -340,6 +408,11 @@ private:
             deskHardware.stop();
             break;
         case STATE_VERIFY_GOTO_HEIGHT:
+            break;
+        case STATE_FIND_HEIGHT_BLIP:
+            deskHardware.stop();
+            break;
+        case STATE_FIND_HEIGHT_LISTEN:
             break;
         }
     }
