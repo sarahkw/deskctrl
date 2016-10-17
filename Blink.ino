@@ -152,15 +152,18 @@ struct TwiceIsNice {
 } twiceIsNice;
 
 class DeskState {
+public:
     // how much height has changed before we realize.
     static const int HEIGHT_DELAY = 9;
 
+private:
     int d_height = -1;
 
     enum State {
         STATE_INITIAL,
         STATE_GOTO_HEIGHT,
-        STATE_MOVE
+        STATE_MOVE,
+        STATE_VERIFY_GOTO_HEIGHT
     } d_state = STATE_INITIAL;
 
     enum Trigger {
@@ -168,13 +171,29 @@ class DeskState {
         TRIGGER_CMD_MOVE,
         TRIGGER_CMD_SET_HEIGHT,
         TRIGGER_CMD_STOP,
-        TRIGGER_HEIGHT_CHANGED
+        TRIGGER_HEIGHT_UPDATED
     };
 
     struct CmdSetHeightData {
         unsigned long startedTime;
         int height;
         bool directionUp;
+
+        int verify_good_count;
+        int verify_bad_count;
+
+        bool reachedHeight(int currentHeight) const {
+            if (directionUp) {
+                if (currentHeight + DeskState::HEIGHT_DELAY > height) {
+                    return true;
+                }
+            } else {
+                if (currentHeight - DeskState::HEIGHT_DELAY < height) {
+                    return true;
+                }
+            }
+            return false;
+        }
     } d_cmdSetHeightData;
 
     struct CmdMoveData {
@@ -191,12 +210,6 @@ class DeskState {
 
     void stateTrigger(Trigger tgr, void* data = NULL)
     {
-//        if (tgr == TRIGGER_HEIGHT_CHANGED) {
-//            char buffer[255];
-//            sprintf(buffer, "New height: %d\r\n", d_height);
-//            Serial.write(buffer);
-//        }
-
         switch (d_state) {
         case STATE_INITIAL:
             switch (tgr) {
@@ -225,15 +238,9 @@ class DeskState {
                     changeState(STATE_INITIAL);
                 }
                 break;
-            case TRIGGER_HEIGHT_CHANGED:
-                if (d_cmdSetHeightData.directionUp) {
-                    if (d_height + HEIGHT_DELAY > d_cmdSetHeightData.height) {
-                        changeState(STATE_INITIAL);
-                    }
-                } else {
-                    if (d_height - HEIGHT_DELAY < d_cmdSetHeightData.height) {
-                        changeState(STATE_INITIAL);
-                    }
+            case TRIGGER_HEIGHT_UPDATED:
+                if (d_cmdSetHeightData.reachedHeight(d_height)) {
+                    changeState(STATE_VERIFY_GOTO_HEIGHT);
                 }
                 break;
             default:
@@ -245,6 +252,37 @@ class DeskState {
             case TRIGGER_BLIP:
                 if (timeBetween(d_cmdMoveData.startedTime, millis()) >
                     d_cmdMoveData.duration) {
+                    changeState(STATE_INITIAL);
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case STATE_VERIFY_GOTO_HEIGHT:
+            switch (tgr) {
+            case TRIGGER_HEIGHT_UPDATED: {
+                int& vgc = d_cmdSetHeightData.verify_good_count;
+                int& vbc = d_cmdSetHeightData.verify_bad_count;
+                if (d_cmdSetHeightData.reachedHeight(d_height)) {
+                    ++vgc;
+                } else {
+                    ++vbc;
+                }
+                // If 7 out of 10 are "bad", then we stopped because
+                // of bad data. Let's keep trying.
+                if (vgc + vbc > 10) {
+                    if (vbc > 7) {
+                        changeState(STATE_GOTO_HEIGHT);
+                    } else {
+                        changeState(STATE_INITIAL);
+                    }
+                }
+            } break;
+            case TRIGGER_BLIP:
+                // Reuse same timeout.
+                static const int TIMEOUT = 30000;
+                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) > TIMEOUT) {
                     changeState(STATE_INITIAL);
                 }
                 break;
@@ -271,6 +309,8 @@ class DeskState {
                 d_cmdSetHeightData.directionUp = false;
                 deskHardware.down();
             }
+            d_cmdSetHeightData.verify_good_count = 0;
+            d_cmdSetHeightData.verify_bad_count = 0;
         }
             break;
         case STATE_MOVE: {
@@ -278,12 +318,15 @@ class DeskState {
             d_cmdMoveData.startedTime = millis();
             d_cmdMoveData.duration = args.arg0;
             d_cmdMoveData.directionUp = args.arg1;
+
             if (d_cmdMoveData.directionUp) {
                 deskHardware.up();
             } else {
                 deskHardware.down();
             }
         } break;
+        case STATE_VERIFY_GOTO_HEIGHT:
+            break;
         }
     }
 
@@ -295,6 +338,8 @@ class DeskState {
         case STATE_GOTO_HEIGHT:
         case STATE_MOVE:
             deskHardware.stop();
+            break;
+        case STATE_VERIFY_GOTO_HEIGHT:
             break;
         }
     }
@@ -359,8 +404,8 @@ class DeskState {
             }
             if (newHeight != d_height) {
                 d_height = newHeight;
-                stateTrigger(TRIGGER_HEIGHT_CHANGED);
             }
+            stateTrigger(TRIGGER_HEIGHT_UPDATED);
         }
     }
 
