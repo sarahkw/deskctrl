@@ -145,7 +145,7 @@ private:
     enum class Trigger {
         BLIP,
         CMD_MOVE,
-        CMD_SET_HEIGHT,
+        CMD_GOTO_HEIGHT,
         CMD_STOP,
         HEIGHT_UPDATED
     };
@@ -212,7 +212,7 @@ private:
             case Trigger::CMD_MOVE:
                 changeState(State::MOVE, data);
                 break;
-            case Trigger::CMD_SET_HEIGHT: {
+            case Trigger::CMD_GOTO_HEIGHT: {
                 int height = *reinterpret_cast<int*>(data);
                 if (d_height == -1) {
                     changeState(State::FIND_HEIGHT_BLIP, data);
@@ -418,7 +418,7 @@ private:
         stateTrigger(Trigger::CMD_MOVE, &args);
     }
 
-    void cmdSetHeight(int height)
+    void cmdGotoHeight(int height)
     {
         if (height == d_height) {
             return;
@@ -440,7 +440,7 @@ private:
             static const int FACTOR = 100;
             cmdMove(heightDiff * FACTOR, height > d_height);
         } else {
-            stateTrigger(Trigger::CMD_SET_HEIGHT, &height);
+            stateTrigger(Trigger::CMD_GOTO_HEIGHT, &height);
         }
     }
 
@@ -500,12 +500,12 @@ void loop()
                 Serial.write(buffer);
             } else if (bytes[0] == '1') {
                 // 300 = height for sitting
-                deskState.cmdSetHeight(300);
+                deskState.cmdGotoHeight(300);
             } else if (bytes[0] == '2') {
                 // 325 = a little too high for sitting
-                deskState.cmdSetHeight(325);
+                deskState.cmdGotoHeight(325);
             } else if (bytes[0] == '3') {
-                deskState.cmdSetHeight(418);
+                deskState.cmdGotoHeight(418);
             }
         } else if (size == 4) {
             unsigned short command;
@@ -519,7 +519,7 @@ void loop()
                 Serial.write(reinterpret_cast<const char*>(&height), 4);
             } break;
             case 2:
-                deskState.cmdSetHeight(argument);
+                deskState.cmdGotoHeight(argument);
                 break;
             case 3:
                 deskState.cmdMove(argument, true);
