@@ -186,7 +186,7 @@ private:
 
     struct CmdFindHeightData {
         // State::FIND_HEIGHT_BLIP
-        static const int BLIP_TIMEOUT = 1000;
+        static const int BLIP_TIMEOUT = 200;
         unsigned long blipStartedTime;
         int targetHeight;
 
