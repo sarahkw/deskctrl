@@ -153,7 +153,7 @@ private:
     struct CmdGotoHeightData {
         static const int TIMEOUT = 30000;
         unsigned long startedTime;
-        int height;
+        int requestedHeight;
         bool directionUp;
 
         static const int VERIFY_CONVERGE_SKIP = 20;
@@ -166,11 +166,11 @@ private:
 
         bool reachedHeight(int currentHeight) const {
             if (directionUp) {
-                if (currentHeight + DeskState::HEIGHT_DELAY > height) {
+                if (currentHeight + DeskState::HEIGHT_DELAY > requestedHeight) {
                     return true;
                 }
             } else {
-                if (currentHeight - DeskState::HEIGHT_DELAY < height) {
+                if (currentHeight - DeskState::HEIGHT_DELAY < requestedHeight) {
                     return true;
                 }
             }
@@ -272,7 +272,7 @@ private:
                 if (d.lastHeightSeenCount ==
                     CmdGotoHeightData::VERIFY_CONVERGE_COUNT) {
                     if (!d_cmdGotoHeightData.reachedHeight(d_height)) {
-                        int height = d.height;
+                        int height = d.requestedHeight;
                         changeState(State::GOTO_HEIGHT, &height);
                     } else {
                         changeState(State::INITIAL);
@@ -338,7 +338,7 @@ private:
         case State::GOTO_HEIGHT: {
             int height = *reinterpret_cast<int*>(data);
             d_cmdGotoHeightData.startedTime = millis();
-            d_cmdGotoHeightData.height = height;
+            d_cmdGotoHeightData.requestedHeight = height;
             if (height > d_height) {
                 d_cmdGotoHeightData.directionUp = true;
                 deskHardware.up();
