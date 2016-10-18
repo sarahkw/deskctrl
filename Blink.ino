@@ -133,21 +133,21 @@ public:
 private:
     int d_height = -1;
 
-    enum State {
-        STATE_INITIAL,
-        STATE_GOTO_HEIGHT,
-        STATE_MOVE,
-        STATE_VERIFY_GOTO_HEIGHT,
-        STATE_FIND_HEIGHT_BLIP,
-        STATE_FIND_HEIGHT_LISTEN
-    } d_state = STATE_INITIAL;
+    enum class State {
+        INITIAL,
+        GOTO_HEIGHT,
+        MOVE,
+        VERIFY_GOTO_HEIGHT,
+        FIND_HEIGHT_BLIP,
+        FIND_HEIGHT_LISTEN
+    } d_state = State::INITIAL;
 
-    enum Trigger {
-        TRIGGER_BLIP,
-        TRIGGER_CMD_MOVE,
-        TRIGGER_CMD_SET_HEIGHT,
-        TRIGGER_CMD_STOP,
-        TRIGGER_HEIGHT_UPDATED
+    enum class Trigger {
+        BLIP,
+        CMD_MOVE,
+        CMD_SET_HEIGHT,
+        CMD_STOP,
+        HEIGHT_UPDATED
     };
 
     struct CmdSetHeightData {
@@ -156,8 +156,8 @@ private:
         int height;
         bool directionUp;
 
-        static const int VERIFY_CONVERGE_COUNT = 10;
-        static const int VERIFY_CONVERGE_TIMEOUT = 5000;
+        static const int VERIFY_CONVERGE_COUNT = 20;
+        static const int VERIFY_CONVERGE_TIMEOUT = 10000;
         unsigned long verifyStartedTime;
         int lastHeight;
         int lastHeightSeenCount;
@@ -183,12 +183,12 @@ private:
     } d_cmdMoveData;
 
     struct CmdFindHeightData {
-        // STATE_FIND_HEIGHT_BLIP
+        // State::FIND_HEIGHT_BLIP
         static const int BLIP_TIMEOUT = 10;
         unsigned long startedTime;
         int targetHeight;
 
-        // STATE_FIND_HEIGHT_LISTEN
+        // State::FIND_HEIGHT_LISTEN
         static const int CONVERGE_COUNT = 5;
         static const int CONVERGE_TIMEOUT = 1000;
         unsigned long startedTime2;
@@ -205,17 +205,17 @@ private:
     void stateTrigger(Trigger tgr, void* data = NULL)
     {
         switch (d_state) {
-        case STATE_INITIAL:
+        case State::INITIAL:
             switch (tgr) {
-            case TRIGGER_CMD_MOVE:
-                changeState(STATE_MOVE, data);
+            case Trigger::CMD_MOVE:
+                changeState(State::MOVE, data);
                 break;
-            case TRIGGER_CMD_SET_HEIGHT: {
+            case Trigger::CMD_SET_HEIGHT: {
                 int height = *reinterpret_cast<int*>(data);
                 if (d_height == -1) {
-                    changeState(STATE_FIND_HEIGHT_BLIP, data);
+                    changeState(State::FIND_HEIGHT_BLIP, data);
                 } else if (d_height != height) {
-                    changeState(STATE_GOTO_HEIGHT, data);
+                    changeState(State::GOTO_HEIGHT, data);
                 } else {
                     // We're already here.
                 }
@@ -224,38 +224,38 @@ private:
                 break;
             }
             break;
-        case STATE_GOTO_HEIGHT:
+        case State::GOTO_HEIGHT:
             switch (tgr) {
-            case TRIGGER_BLIP:
+            case Trigger::BLIP:
                 if (timeBetween(d_cmdSetHeightData.startedTime, millis()) >
                     CmdSetHeightData::TIMEOUT) {
-                    changeState(STATE_INITIAL);
+                    changeState(State::INITIAL);
                 }
                 break;
-            case TRIGGER_HEIGHT_UPDATED:
+            case Trigger::HEIGHT_UPDATED:
                 if (d_cmdSetHeightData.reachedHeight(d_height)) {
-                    changeState(STATE_VERIFY_GOTO_HEIGHT);
+                    changeState(State::VERIFY_GOTO_HEIGHT);
                 }
                 break;
             default:
                 break;
             }
             break;
-        case STATE_MOVE:
+        case State::MOVE:
             switch (tgr) {
-            case TRIGGER_BLIP:
+            case Trigger::BLIP:
                 if (timeBetween(d_cmdMoveData.startedTime, millis()) >
                     d_cmdMoveData.duration) {
-                    changeState(STATE_INITIAL);
+                    changeState(State::INITIAL);
                 }
                 break;
             default:
                 break;
             }
             break;
-        case STATE_VERIFY_GOTO_HEIGHT:
+        case State::VERIFY_GOTO_HEIGHT:
             switch (tgr) {
-            case TRIGGER_HEIGHT_UPDATED: {
+            case Trigger::HEIGHT_UPDATED: {
                 auto& d = d_cmdSetHeightData;
                 if (d_height == d.lastHeight) {
                     ++d.lastHeightSeenCount;
@@ -267,38 +267,38 @@ private:
                     CmdSetHeightData::VERIFY_CONVERGE_COUNT) {
                     if (!d_cmdSetHeightData.reachedHeight(d_height)) {
                         int height = d.height;
-                        changeState(STATE_GOTO_HEIGHT, &height);
+                        changeState(State::GOTO_HEIGHT, &height);
                     } else {
-                        changeState(STATE_INITIAL);
+                        changeState(State::INITIAL);
                     }
                 }
             } break;
-            case TRIGGER_BLIP:
+            case Trigger::BLIP:
                 if (timeBetween(d_cmdSetHeightData.verifyStartedTime,
                                 millis()) >
                     CmdSetHeightData::VERIFY_CONVERGE_TIMEOUT) {
-                    changeState(STATE_INITIAL);
+                    changeState(State::INITIAL);
                 }
                 break;
             default:
                 break;
             }
             break;
-        case STATE_FIND_HEIGHT_BLIP:
+        case State::FIND_HEIGHT_BLIP:
             switch (tgr) {
-            case TRIGGER_BLIP:
+            case Trigger::BLIP:
                 if (timeBetween(d_cmdFindHeightData.startedTime, millis()) >
                     CmdFindHeightData::BLIP_TIMEOUT) {
-                    changeState(STATE_FIND_HEIGHT_LISTEN);
+                    changeState(State::FIND_HEIGHT_LISTEN);
                 }
                 break;
             default:
                 break;
             }
             break;
-        case STATE_FIND_HEIGHT_LISTEN:
+        case State::FIND_HEIGHT_LISTEN:
             switch (tgr) {
-            case TRIGGER_HEIGHT_UPDATED: {
+            case Trigger::HEIGHT_UPDATED: {
                 auto& d = d_cmdFindHeightData;
                 if (d_height == d.lastHeight) {
                     ++d.lastHeightSeenCount;
@@ -308,13 +308,13 @@ private:
                 }
                 if (d.lastHeightSeenCount ==
                     CmdFindHeightData::CONVERGE_COUNT) {
-                    changeState(STATE_GOTO_HEIGHT, &d.targetHeight);
+                    changeState(State::GOTO_HEIGHT, &d.targetHeight);
                 }
             } break;
-            case TRIGGER_BLIP:
+            case Trigger::BLIP:
                 if (timeBetween(d_cmdFindHeightData.startedTime2, millis()) >
                     CmdFindHeightData::CONVERGE_TIMEOUT) {
-                    changeState(STATE_INITIAL);
+                    changeState(State::INITIAL);
                 }
                 break;
             default:
@@ -327,9 +327,9 @@ private:
     void stateEnter(State enterState, void* data = NULL)
     {
         switch (enterState) {
-        case STATE_INITIAL:
+        case State::INITIAL:
             break;
-        case STATE_GOTO_HEIGHT: {
+        case State::GOTO_HEIGHT: {
             int height = *reinterpret_cast<int*>(data);
             d_cmdSetHeightData.startedTime = millis();
             d_cmdSetHeightData.height = height;
@@ -342,7 +342,7 @@ private:
             }
         }
             break;
-        case STATE_MOVE: {
+        case State::MOVE: {
             Arg2<int, bool>& args = *reinterpret_cast<Arg2<int, bool>*>(data);
             d_cmdMoveData.startedTime = millis();
             d_cmdMoveData.duration = args.arg0;
@@ -354,12 +354,12 @@ private:
                 deskHardware.down();
             }
         } break;
-        case STATE_VERIFY_GOTO_HEIGHT:
+        case State::VERIFY_GOTO_HEIGHT:
             d_cmdSetHeightData.verifyStartedTime = millis();
             d_cmdSetHeightData.lastHeight = -1;
             d_cmdSetHeightData.lastHeightSeenCount = 0;
             break;
-        case STATE_FIND_HEIGHT_BLIP: {
+        case State::FIND_HEIGHT_BLIP: {
             int height = *reinterpret_cast<int*>(data);
             d_cmdFindHeightData.startedTime = millis();
             d_cmdFindHeightData.targetHeight = height;
@@ -368,7 +368,7 @@ private:
             // crushed. Haha.
             deskHardware.up();
         } break;
-        case STATE_FIND_HEIGHT_LISTEN:
+        case State::FIND_HEIGHT_LISTEN:
             d_cmdFindHeightData.startedTime2 = millis();
             d_cmdFindHeightData.lastHeight = -1;
             d_cmdFindHeightData.lastHeightSeenCount = 0;
@@ -379,18 +379,18 @@ private:
     void stateExit(State exitState)
     {
         switch (exitState) {
-        case STATE_INITIAL:
+        case State::INITIAL:
             break;
-        case STATE_GOTO_HEIGHT:
-        case STATE_MOVE:
+        case State::GOTO_HEIGHT:
+        case State::MOVE:
             deskHardware.stop();
             break;
-        case STATE_VERIFY_GOTO_HEIGHT:
+        case State::VERIFY_GOTO_HEIGHT:
             break;
-        case STATE_FIND_HEIGHT_BLIP:
+        case State::FIND_HEIGHT_BLIP:
             deskHardware.stop();
             break;
-        case STATE_FIND_HEIGHT_LISTEN:
+        case State::FIND_HEIGHT_LISTEN:
             break;
         }
     }
@@ -404,11 +404,11 @@ private:
 
    public:
     int height() const { return d_height; }
-    void blip() { stateTrigger(TRIGGER_BLIP); }
+    void blip() { stateTrigger(Trigger::BLIP); }
     void cmdMove(int duration, bool directionUp)
     {
         Arg2<int, bool> args{duration, directionUp};
-        stateTrigger(TRIGGER_CMD_MOVE, &args);
+        stateTrigger(Trigger::CMD_MOVE, &args);
     }
 
     void cmdSetHeight(int height)
@@ -433,11 +433,11 @@ private:
             static const int FACTOR = 100;
             cmdMove(heightDiff * FACTOR, height > d_height);
         } else {
-            stateTrigger(TRIGGER_CMD_SET_HEIGHT, &height);
+            stateTrigger(Trigger::CMD_SET_HEIGHT, &height);
         }
     }
 
-    void cmdStop() { stateTrigger(TRIGGER_CMD_STOP); }
+    void cmdStop() { stateTrigger(Trigger::CMD_STOP); }
     void parseFromDesk(const char *bytes)
     {
         struct Msg {
@@ -456,7 +456,7 @@ private:
             if (newHeight != d_height) {
                 d_height = newHeight;
             }
-            stateTrigger(TRIGGER_HEIGHT_UPDATED);
+            stateTrigger(Trigger::HEIGHT_UPDATED);
         }
     }
 
