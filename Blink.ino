@@ -537,6 +537,10 @@ void loop()
             memcpy(&argument, bytes + 2, sizeof(command));
             
             switch (command) {
+            case 1: {
+                int height = deskState.height();
+                Serial.write(reinterpret_cast<const char*>(&height), 4);
+            } break;
             case 2:
                 deskState.cmdSetHeight(argument);
                 break;
