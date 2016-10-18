@@ -475,14 +475,6 @@ void loop()
         if (deskByteCollector.blip(bytes) == 4) {
             if (twiceIsNice.bytesGood(bytes)) {
                 deskState.parseFromDesk(bytes);
-                //            char buf[256];
-                //            sprintf(buf, "%x %x %x %x\r\n",
-                //            byteCollector.bytes[0],
-                //                    byteCollector.bytes[1],
-                //                    byteCollector.bytes[2],
-                //                    byteCollector.bytes[3]);
-                //            Serial.write(buf);
-                //            Serial.write(byteCollector.bytes, 4);
             }
         }
     }
