@@ -183,11 +183,11 @@ private:
         int height;
         bool directionUp;
 
-        // Give it a second to settle.
-        static const int VERIFY_DELAY = 1000;
+        static const int VERIFY_CONVERGE_COUNT = 10;
+        static const int VERIFY_CONVERGE_TIMEOUT = 5000;
         unsigned long verifyStartedTime;
-        int verify_good_count;
-        int verify_bad_count;
+        int lastHeight;
+        int lastHeightSeenCount;
 
         bool reachedHeight(int currentHeight) const {
             if (directionUp) {
@@ -283,31 +283,27 @@ private:
         case STATE_VERIFY_GOTO_HEIGHT:
             switch (tgr) {
             case TRIGGER_HEIGHT_UPDATED: {
-                if (timeBetween(d_cmdSetHeightData.verifyStartedTime,
-                                millis()) < CmdSetHeightData::VERIFY_DELAY) {
-                    break;
-                }
-                int& vgc = d_cmdSetHeightData.verify_good_count;
-                int& vbc = d_cmdSetHeightData.verify_bad_count;
-                if (d_cmdSetHeightData.reachedHeight(d_height)) {
-                    ++vgc;
+                auto& d = d_cmdSetHeightData;
+                if (d_height == d.lastHeight) {
+                    ++d.lastHeightSeenCount;
                 } else {
-                    ++vbc;
+                    d.lastHeight = d_height;
+                    d.lastHeightSeenCount = 1;
                 }
-                // If 7 out of 10 are "bad", then we stopped because
-                // of bad data. Let's keep trying.
-                if (vgc + vbc > 10) {
-                    if (vbc > 7) {
-                        changeState(STATE_GOTO_HEIGHT);
+                if (d.lastHeightSeenCount ==
+                    CmdSetHeightData::VERIFY_CONVERGE_COUNT) {
+                    if (!d_cmdSetHeightData.reachedHeight(d_height)) {
+                        int height = d.height;
+                        changeState(STATE_GOTO_HEIGHT, &height);
                     } else {
                         changeState(STATE_INITIAL);
                     }
                 }
             } break;
             case TRIGGER_BLIP:
-                // Same timeout as the original goto height.
-                if (timeBetween(d_cmdSetHeightData.startedTime,
-                                millis()) > CmdSetHeightData::TIMEOUT) {
+                if (timeBetween(d_cmdSetHeightData.verifyStartedTime,
+                                millis()) >
+                    CmdSetHeightData::VERIFY_CONVERGE_TIMEOUT) {
                     changeState(STATE_INITIAL);
                 }
                 break;
@@ -387,8 +383,8 @@ private:
         } break;
         case STATE_VERIFY_GOTO_HEIGHT:
             d_cmdSetHeightData.verifyStartedTime = millis();
-            d_cmdSetHeightData.verify_good_count = 0;
-            d_cmdSetHeightData.verify_bad_count = 0;
+            d_cmdSetHeightData.lastHeight = -1;
+            d_cmdSetHeightData.lastHeightSeenCount = 0;
             break;
         case STATE_FIND_HEIGHT_BLIP: {
             int height = *reinterpret_cast<int*>(data);
