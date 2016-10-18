@@ -150,7 +150,7 @@ private:
         HEIGHT_UPDATED
     };
 
-    struct CmdSetHeightData {
+    struct CmdGotoHeightData {
         static const int TIMEOUT = 30000;
         unsigned long startedTime;
         int height;
@@ -176,7 +176,7 @@ private:
             }
             return false;
         }
-    } d_cmdSetHeightData;
+    } d_cmdGotoHeightData;
 
     struct CmdMoveData {
         unsigned long startedTime;
@@ -229,13 +229,13 @@ private:
         case State::GOTO_HEIGHT:
             switch (tgr) {
             case Trigger::BLIP:
-                if (timeBetween(d_cmdSetHeightData.startedTime, millis()) >
-                    CmdSetHeightData::TIMEOUT) {
+                if (timeBetween(d_cmdGotoHeightData.startedTime, millis()) >
+                    CmdGotoHeightData::TIMEOUT) {
                     changeState(State::INITIAL);
                 }
                 break;
             case Trigger::HEIGHT_UPDATED:
-                if (d_cmdSetHeightData.reachedHeight(d_height)) {
+                if (d_cmdGotoHeightData.reachedHeight(d_height)) {
                     changeState(State::VERIFY_GOTO_HEIGHT);
                 }
                 break;
@@ -258,8 +258,8 @@ private:
         case State::VERIFY_GOTO_HEIGHT:
             switch (tgr) {
             case Trigger::HEIGHT_UPDATED: {
-                auto& d = d_cmdSetHeightData;
-                if (d.skipped < CmdSetHeightData::VERIFY_CONVERGE_SKIP) {
+                auto& d = d_cmdGotoHeightData;
+                if (d.skipped < CmdGotoHeightData::VERIFY_CONVERGE_SKIP) {
                     ++d.skipped;
                     break;
                 }
@@ -270,8 +270,8 @@ private:
                     d.lastHeightSeenCount = 1;
                 }
                 if (d.lastHeightSeenCount ==
-                    CmdSetHeightData::VERIFY_CONVERGE_COUNT) {
-                    if (!d_cmdSetHeightData.reachedHeight(d_height)) {
+                    CmdGotoHeightData::VERIFY_CONVERGE_COUNT) {
+                    if (!d_cmdGotoHeightData.reachedHeight(d_height)) {
                         int height = d.height;
                         changeState(State::GOTO_HEIGHT, &height);
                     } else {
@@ -280,9 +280,9 @@ private:
                 }
             } break;
             case Trigger::BLIP:
-                if (timeBetween(d_cmdSetHeightData.verifyStartedTime,
+                if (timeBetween(d_cmdGotoHeightData.verifyStartedTime,
                                 millis()) >
-                    CmdSetHeightData::VERIFY_CONVERGE_TIMEOUT) {
+                    CmdGotoHeightData::VERIFY_CONVERGE_TIMEOUT) {
                     changeState(State::INITIAL);
                 }
                 break;
@@ -337,13 +337,13 @@ private:
             break;
         case State::GOTO_HEIGHT: {
             int height = *reinterpret_cast<int*>(data);
-            d_cmdSetHeightData.startedTime = millis();
-            d_cmdSetHeightData.height = height;
+            d_cmdGotoHeightData.startedTime = millis();
+            d_cmdGotoHeightData.height = height;
             if (height > d_height) {
-                d_cmdSetHeightData.directionUp = true;
+                d_cmdGotoHeightData.directionUp = true;
                 deskHardware.up();
             } else {
-                d_cmdSetHeightData.directionUp = false;
+                d_cmdGotoHeightData.directionUp = false;
                 deskHardware.down();
             }
         }
@@ -361,10 +361,10 @@ private:
             }
         } break;
         case State::VERIFY_GOTO_HEIGHT:
-            d_cmdSetHeightData.verifyStartedTime = millis();
-            d_cmdSetHeightData.lastHeight = -1;
-            d_cmdSetHeightData.lastHeightSeenCount = 0;
-            d_cmdSetHeightData.skipped = 0;
+            d_cmdGotoHeightData.verifyStartedTime = millis();
+            d_cmdGotoHeightData.lastHeight = -1;
+            d_cmdGotoHeightData.lastHeightSeenCount = 0;
+            d_cmdGotoHeightData.skipped = 0;
             break;
         case State::FIND_HEIGHT_BLIP: {
             int height = *reinterpret_cast<int*>(data);
