@@ -186,14 +186,14 @@ private:
 
     struct CmdFindHeightData {
         // State::FIND_HEIGHT_BLIP
-        static const int BLIP_TIMEOUT = 10;
-        unsigned long startedTime;
+        static const int BLIP_TIMEOUT = 1000;
+        unsigned long blipStartedTime;
         int targetHeight;
 
         // State::FIND_HEIGHT_LISTEN
         static const int CONVERGE_COUNT = 5;
         static const int CONVERGE_TIMEOUT = 1000;
-        unsigned long startedTime2;
+        unsigned long listenStartedTime;
         int lastHeight;
         int lastHeightSeenCount;
     } d_cmdFindHeightData;
@@ -293,7 +293,7 @@ private:
         case State::FIND_HEIGHT_BLIP:
             switch (tgr) {
             case Trigger::BLIP:
-                if (timeBetween(d_cmdFindHeightData.startedTime, millis()) >
+                if (timeBetween(d_cmdFindHeightData.blipStartedTime, millis()) >
                     CmdFindHeightData::BLIP_TIMEOUT) {
                     changeState(State::FIND_HEIGHT_LISTEN);
                 }
@@ -318,7 +318,8 @@ private:
                 }
             } break;
             case Trigger::BLIP:
-                if (timeBetween(d_cmdFindHeightData.startedTime2, millis()) >
+                if (timeBetween(d_cmdFindHeightData.listenStartedTime,
+                                millis()) >
                     CmdFindHeightData::CONVERGE_TIMEOUT) {
                     changeState(State::INITIAL);
                 }
@@ -368,7 +369,7 @@ private:
             break;
         case State::FIND_HEIGHT_BLIP: {
             int height = *reinterpret_cast<int*>(data);
-            d_cmdFindHeightData.startedTime = millis();
+            d_cmdFindHeightData.blipStartedTime = millis();
             d_cmdFindHeightData.targetHeight = height;
 
             // I think Up is probably safer so nobody gets
@@ -376,7 +377,7 @@ private:
             deskHardware.up();
         } break;
         case State::FIND_HEIGHT_LISTEN:
-            d_cmdFindHeightData.startedTime2 = millis();
+            d_cmdFindHeightData.listenStartedTime = millis();
             d_cmdFindHeightData.lastHeight = -1;
             d_cmdFindHeightData.lastHeightSeenCount = 0;
             break;
