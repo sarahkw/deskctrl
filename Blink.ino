@@ -543,7 +543,7 @@ void loop()
             switch (command) {
             case 1: {
                 int height = deskState.height();
-                Serial.write(reinterpret_cast<const char*>(&height), 4);
+                Serial.write(reinterpret_cast<const char*>(&height), sizeof(height));
             } break;
             case 2:
                 deskState.cmdGotoHeight(argument);
