@@ -177,13 +177,11 @@ private:
         int requestedHeight;
         bool directionUp;
 
-        static const int VERIFY_CONVERGE_SKIP = 20;
-        static const int VERIFY_CONVERGE_COUNT = 20;
-        static const int VERIFY_CONVERGE_TIMEOUT = 10000;
+        static const int VERIFY_CONVERGE_COUNT = 10;
+        static const int VERIFY_CONVERGE_TIMEOUT = 5000;
         unsigned long verifyStartedTime;
         int lastHeight;
         int lastHeightSeenCount;
-        int skipped;
 
         bool reachedHeight(int currentHeight) const {
             if (directionUp) {
@@ -280,10 +278,6 @@ private:
             switch (tgr) {
             case Trigger::HEIGHT_UPDATED: {
                 auto& d = d_cmdGotoHeightData;
-                if (d.skipped < CmdGotoHeightData::VERIFY_CONVERGE_SKIP) {
-                    ++d.skipped;
-                    break;
-                }
                 if (d_height == d.lastHeight) {
                     ++d.lastHeightSeenCount;
                 } else {
@@ -389,7 +383,6 @@ private:
             d_cmdGotoHeightData.verifyStartedTime = millis();
             d_cmdGotoHeightData.lastHeight = -1;
             d_cmdGotoHeightData.lastHeightSeenCount = 0;
-            d_cmdGotoHeightData.skipped = 0;
             break;
         case State::FIND_HEIGHT_BLIP: {
             int height = *reinterpret_cast<int*>(data);
