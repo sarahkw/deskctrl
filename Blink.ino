@@ -60,6 +60,7 @@ class ByteCollector {
 
     bool d_isPaused = true;
     unsigned long d_lastMessage = 0;
+    bool d_returned = false;
 
     bool d_debug;
 
@@ -70,9 +71,13 @@ class ByteCollector {
         }
     }
 
-    void clear() { d_position = 0; }
-    bool full() const { return d_position == d_size; }
+    void clear()
+    {
+        d_position = 0;
+        d_returned = false;
+    }
 
+    bool full() const { return d_position == d_size; }
     // No copy or assign.
     ByteCollector(ByteCollector&);
     void operator=(ByteCollector&);
@@ -103,7 +108,8 @@ class ByteCollector {
         size_t bytesReturned = 0;
 
         // Are we full?
-        if (full()) {
+        if (full() && !d_returned) {
+            d_returned = true;
             bytesReturned = d_size;
             memcpy(outputBytes, d_bytes, bytesReturned);
         }
