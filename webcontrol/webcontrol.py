@@ -28,7 +28,7 @@ class Protocol(object):
 
 class SarahsDesk(object):
     def __init__(self):
-        self.ser = serial.Serial("/dev/ttyACM0", 9600)
+        self.ser = serial.Serial("/dev/ttyACM0", 9600, timeout=1.0)
 
     class HelpfulError(Exception):
         pass
@@ -45,13 +45,13 @@ class SarahsDesk(object):
         elif direction == "down":
             self.ser.write(Protocol.moveDown(duration))
 
-    def put_height_preset(self, preset):
-        # TODO
-        print("TODO: Set height to preset {}".format(preset))
-
     def get(self):
-        # TODO
-        return {"height": None}
+        self.ser.reset_input_buffer()
+
+        self.ser.write(Protocol.getHeight())
+        data = self.ser.read(2)
+        height, = struct.unpack("<h", data)
+        return {"height": height}
 
     def _put_internal(self, data):
         reply = {}
@@ -66,8 +66,6 @@ class SarahsDesk(object):
                 self.put_height_const(int(int(data) / 100 * (MAX-MIN) + MIN))
             elif subcommand == "move":
                 self.put_height_move(int(data["duration"]), data["direction"])
-            elif subcommand == "preset":
-                self.put_height_preset(int(data))
             else:
                 raise self.HelpfulError("Bad subcommand")
         else:
