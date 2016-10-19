@@ -1,6 +1,7 @@
 #include <SoftwareSerial.h>
 #include <limits.h>
 #include <stdlib.h>
+#include "simple-circular-buffer.h"
 
 unsigned long timeBetween(unsigned long from, unsigned long to)
 {
@@ -10,6 +11,12 @@ unsigned long timeBetween(unsigned long from, unsigned long to)
     // Overflowed.
     return ULONG_MAX - from + to;
 }
+
+#define DEBUG_BUFFER
+
+#ifdef DEBUG_BUFFER
+CircularBuffer<char, 512> d_debugBuffer;
+#endif
 
 const int rxPin = 12;
 const int txPin = 13;  // Not used.
@@ -54,6 +61,8 @@ class ByteCollector {
     bool d_isPaused = true;
     unsigned long d_lastMessage = 0;
 
+    bool d_debug;
+
     void insert(char byte)
     {
         if (d_position < d_size) {
@@ -69,10 +78,11 @@ class ByteCollector {
     void operator=(ByteCollector&);
 
    public:
-    ByteCollector(Stream& str, size_t size)
+    ByteCollector(Stream& str, size_t size, bool debug=false)
         : d_stream(str),
           d_bytes(reinterpret_cast<char*>(malloc(size))),
-          d_size(size)
+          d_size(size),
+          d_debug(debug)
     {
     }
     ~ByteCollector() { free(d_bytes); }
@@ -81,6 +91,11 @@ class ByteCollector {
         if (d_stream.available()) {
             int byte = d_stream.read();
             insert(byte);
+#ifdef DEBUG_BUFFER
+            if (d_debug) {
+                d_debugBuffer.push_back(byte);
+            }
+#endif
             d_lastMessage = millis();
             d_isPaused = false;
         }
@@ -110,7 +125,7 @@ class ByteCollector {
 
 };
 
-ByteCollector deskByteCollector(portDesk, 4);
+ByteCollector deskByteCollector(portDesk, 4, true);
 ByteCollector controlByteCollector(Serial, 4);
 
 /// Only accept messages if we get two of them in a row. This will
@@ -333,6 +348,9 @@ private:
 
     void stateEnter(State enterState, void* data = NULL)
     {
+#ifdef DEBUG_BUFFER
+        d_debugBuffer.push_back(0xF << 4 | static_cast<char>(enterState));
+#endif
         switch (enterState) {
         case State::INITIAL:
             break;
@@ -508,6 +526,15 @@ void loop()
             } else if (bytes[0] == '3') {
                 deskState.cmdGotoHeight(418);
             }
+#ifdef DEBUG_BUFFER
+            else if (bytes[0] == '.') {
+                for (auto x = d_debugBuffer.begin(); x != d_debugBuffer.end();
+                     x = d_debugBuffer.next(x)) {
+                    Serial.write(*x);
+                }
+                d_debugBuffer.clear();
+            }
+#endif
         } else if (size == 4) {
             unsigned short command;
             unsigned short argument;
