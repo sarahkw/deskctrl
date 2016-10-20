@@ -244,6 +244,7 @@ private:
                         changeState(State::GOTO_HEIGHT, &tmp);
                     });
                     changeState(State::FIND_HEIGHT_BLIP, &params);
+                    // params is moved.
                 } else if (d_height != height) {
                     changeState(State::GOTO_HEIGHT, data);
                 } else {
@@ -395,7 +396,8 @@ private:
             break;
         case State::FIND_HEIGHT_BLIP: {
             d_cmdFindHeightData.params =
-                *reinterpret_cast<CmdFindHeightData::Params*>(data);
+                reinterpret_cast<CmdFindHeightData::Params&&>(
+                    *reinterpret_cast<CmdFindHeightData::Params*>(data));
             d_cmdFindHeightData.blipStartedTime = millis();
 
             // I think Up is probably safer so nobody gets

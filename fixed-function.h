@@ -10,15 +10,12 @@ class fixed_function;
 
 template <typename RET, typename... ARGS, size_t Size>
 class fixed_function<RET(ARGS...), Size> {
-    char data[Size];
-
     struct IFn {
         virtual RET operator()(ARGS&&... args) = 0;
-        virtual IFn* copyTo(void* destination) = 0;
+        //virtual IFn* copyTo(void* destination) = 0;
+        virtual IFn* moveTo(void* destination) = 0;
         virtual ~IFn() {}
     };
-
-    IFn* ptr = nullptr;
 
     template <typename T>
     struct Unnamed : public IFn, T {
@@ -27,10 +24,17 @@ class fixed_function<RET(ARGS...), Size> {
         {
             return T::operator()(static_cast<ARGS&&>(args)...);
         }
-        IFn* copyTo(void* destination) override {
-            return new (destination) Unnamed<T>(*this);
+        //IFn* copyTo(void* destination) override {
+        //    return new (destination) Unnamed<T>(*this);
+        //}
+        IFn* moveTo(void* destination) override {
+            return new (destination)
+                Unnamed<T>(static_cast<Unnamed<T>&&>(*this));
         }
     };
+
+    char data[Size];
+    IFn* ptr = nullptr;
 
    public:
 
@@ -43,10 +47,18 @@ class fixed_function<RET(ARGS...), Size> {
         }
     }
 
-    fixed_function& operator=(fixed_function& other)
+    fixed_function& operator=(fixed_function& other) = delete;
+//    fixed_function& operator=(fixed_function& other)
+//    {
+//        if (other.ptr != nullptr) {
+//            this->ptr = other.ptr->copyTo(this->data);
+//        }
+//    }
+
+    fixed_function& operator=(fixed_function&& other)
     {
         if (other.ptr != nullptr) {
-            this->ptr = other.ptr->copyTo(this->data);
+            this->ptr = other.ptr->moveTo(this->data);
         }
     }
 
