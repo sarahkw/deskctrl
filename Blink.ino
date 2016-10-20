@@ -1,6 +1,5 @@
 #include <SoftwareSerial.h>
 #include <limits.h>
-#include <stdlib.h>
 #include "simple-circular-buffer.h"
 
 unsigned long timeBetween(unsigned long from, unsigned long to)
@@ -85,12 +84,12 @@ class ByteCollector {
    public:
     ByteCollector(Stream& str, size_t size, bool debug=false)
         : d_stream(str),
-          d_bytes(reinterpret_cast<char*>(malloc(size))),
+          d_bytes(new char[size]),
           d_size(size),
           d_debug(debug)
     {
     }
-    ~ByteCollector() { free(d_bytes); }
+    ~ByteCollector() { delete[] d_bytes; }
     size_t blip(char* outputBytes)
     {
         if (d_stream.available()) {
