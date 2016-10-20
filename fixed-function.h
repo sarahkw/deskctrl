@@ -14,6 +14,7 @@ class fixed_function<RET(ARGS...), Size> {
 
     struct IFn {
         virtual RET operator()(ARGS&&... args) = 0;
+        virtual IFn* copyTo(void* destination) = 0;
         virtual ~IFn() {}
     };
 
@@ -22,30 +23,38 @@ class fixed_function<RET(ARGS...), Size> {
     template <typename T>
     struct Unnamed : public IFn, T {
         Unnamed(T&& x) : T(static_cast<T&&>(x)) {}
-        virtual RET operator()(ARGS&&... args) override
+        RET operator()(ARGS&&... args) override
         {
             return T::operator()(static_cast<ARGS&&>(args)...);
+        }
+        IFn* copyTo(void* destination) override {
+            return new (destination) Unnamed<T>(*this);
         }
     };
 
    public:
 
-//    fixed_function() = default;
-//
-//    fixed_function(fixed_function& other)
-//    {
-//        if (other.ptr != nullptr) {
-//            this->ptr =
-//                new (data) DType(*reinterpret_cast<DType*>(&other.data));
-//            this->assigned = true;
-//        }
-//    }
-//
-//    ~fixed_function() {
-//        if (ptr != nullptr) {
-//            ptr->~IFn();
-//        }
-//    }
+    fixed_function() = default;
+
+    fixed_function(fixed_function& other)
+    {
+        if (other.ptr != nullptr) {
+            this->ptr = other.ptr->copyTo(this->data);
+        }
+    }
+
+    fixed_function& operator=(fixed_function& other)
+    {
+        if (other.ptr != nullptr) {
+            this->ptr = other.ptr->copyTo(this->data);
+        }
+    }
+
+    ~fixed_function() {
+        if (ptr != nullptr) {
+            ptr->~IFn();
+        }
+    }
 
     template <typename T>
     void assign(T&& x)
