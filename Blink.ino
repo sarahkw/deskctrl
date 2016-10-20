@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include <limits.h>
+#include "fixed-function.h"
 #include "simple-circular-buffer.h"
 
 unsigned long timeBetween(unsigned long from, unsigned long to)
@@ -203,10 +204,14 @@ private:
     } d_cmdMoveData;
 
     struct CmdFindHeightData {
+
+        struct Params {
+            fixed_function<void(), 16> next;
+        } params;
+
         // State::FIND_HEIGHT_BLIP
         static const int BLIP_TIMEOUT = 200;
         unsigned long blipStartedTime;
-        int targetHeight;
 
         // State::FIND_HEIGHT_LISTEN
         static const int CONVERGE_COUNT = 5;
@@ -233,7 +238,12 @@ private:
             case Trigger::CMD_GOTO_HEIGHT: {
                 int height = *reinterpret_cast<int*>(data);
                 if (d_height == -1) {
-                    changeState(State::FIND_HEIGHT_BLIP, data);
+                    CmdFindHeightData::Params params;
+                    params.next.assign([this, height]() {
+                        int tmp = height;
+                        changeState(State::GOTO_HEIGHT, &tmp);
+                    });
+                    changeState(State::FIND_HEIGHT_BLIP, &params);
                 } else if (d_height != height) {
                     changeState(State::GOTO_HEIGHT, data);
                 } else {
@@ -328,7 +338,7 @@ private:
                 }
                 if (d.lastHeightSeenCount ==
                     CmdFindHeightData::CONVERGE_COUNT) {
-                    changeState(State::GOTO_HEIGHT, &d.targetHeight);
+                    d.params.next();
                 }
             } break;
             case Trigger::BLIP:
@@ -384,9 +394,9 @@ private:
             d_cmdGotoHeightData.lastHeightSeenCount = 0;
             break;
         case State::FIND_HEIGHT_BLIP: {
-            int height = *reinterpret_cast<int*>(data);
+            d_cmdFindHeightData.params =
+                *reinterpret_cast<CmdFindHeightData::Params*>(data);
             d_cmdFindHeightData.blipStartedTime = millis();
-            d_cmdFindHeightData.targetHeight = height;
 
             // I think Up is probably safer so nobody gets
             // crushed. Haha.
