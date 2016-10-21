@@ -359,7 +359,8 @@ private:
     void stateEnter(State enterState, void* data = NULL)
     {
 #ifdef DEBUG_BUFFER
-        d_debugBuffer.push_back(0xF << 4 | static_cast<char>(enterState));
+        d_debugBuffer.push_back(0xFF);
+        d_debugBuffer.push_back(static_cast<char>(enterState));
 #endif
         switch (enterState) {
         case State::INITIAL:
