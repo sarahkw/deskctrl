@@ -18,13 +18,13 @@ unsigned long timeBetween(unsigned long from, unsigned long to)
 CircularBuffer<char, 512> d_debugBuffer;
 #endif
 
-const int rxPin = 12;
-const int txPin = 13;  // Not used.
+const int rxPin = 10;
+const int txPin = 11;  // Not used.
 SoftwareSerial portDesk(rxPin, txPin);
 
 struct DeskHardware {
-    static const int upPin = 7;
-    static const int downPin = 6;
+    static const int upPin = 8;
+    static const int downPin = 9;
 
     DeskHardware()
     {
