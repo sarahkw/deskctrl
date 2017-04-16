@@ -1,3 +1,12 @@
+#ifndef INCLUDED_FIXED_FUNCTION_H
+#deifne INCLUDED_FIXED_FUNCTION_H
+
+/*
+  fixed_function uses type erasure to store a copy of lambda function
+  objects in a fixed-size buffer (no dynamic allocation).
+
+  Arduino doesn't have std::function, so this is its replacement.
+ */
 
 // arduino doesn't have this.
 void* operator new(size_t, void* arg)
@@ -48,12 +57,6 @@ class fixed_function<RET(ARGS...), Size> {
     }
 
     fixed_function& operator=(fixed_function& other) = delete;
-//    fixed_function& operator=(fixed_function& other)
-//    {
-//        if (other.ptr != nullptr) {
-//            this->ptr = other.ptr->copyTo(this->data);
-//        }
-//    }
 
     fixed_function& operator=(fixed_function&& other)
     {
@@ -86,3 +89,5 @@ class fixed_function<RET(ARGS...), Size> {
         return (*ptr)(static_cast<ARGS&&>(args)...);
     }
 };
+
+#endif
