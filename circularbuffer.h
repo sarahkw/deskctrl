@@ -1,9 +1,30 @@
+#ifndef INCLUDED_CIRCULARBUFFER_H
+#define INCLUDED_CIRCULARBUFFER_H
+
+// TODO Add includes for types we use
+
+// Usage:
+//
+//    CircularBuffer<int, 4> cb;
+//    cb.push_back(1);
+//    cb.push_back(2);
+//    cb.push_back(3);
+//    cb.push_back(4);
+//    cb.push_back(5);
+//    for (const int* p = cb.begin();
+//         p != cb.end();
+//         p = cb.next(p)) {
+//        std::cout << *p << "\n";
+//    }
+
 template <typename T, size_t N>
 struct CircularBuffer {
 
     // Keep one more item for code simplicity. Otherwise, begin() and
     // end() will return the same pointer, and iteration will be more
-    // difficult.
+    // difficult to implement. When using an array as a circular
+    // buffer, one past the last element would be the beginning
+    // element.
     enum { ACTUAL_SIZE = N + 1 };
 
     T d_buffer[ACTUAL_SIZE];
@@ -36,6 +57,11 @@ struct CircularBuffer {
     }
 
     size_t size() const {
+        // In arduino libs, min is defined as a macro. Import the
+        // namespace so this code works with both arduino libs, and
+        // without.
+        using namespace std;
+
         return min(d_size, N);
     }
 
@@ -44,3 +70,5 @@ struct CircularBuffer {
         d_size = 0;
     }
 };
+
+#endif
