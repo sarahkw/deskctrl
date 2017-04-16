@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
 #include <limits.h>
-#include "fixed-function.h"
+#include "fixed_function.h"
 #include "circularbuffer.h"
 
 unsigned long timeBetween(unsigned long from, unsigned long to)
